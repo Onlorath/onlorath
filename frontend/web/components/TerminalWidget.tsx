@@ -19,10 +19,16 @@ export default function TerminalWidget() {
   
   const terminalEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const outputAreaRef = useRef<HTMLDivElement>(null);
   const isFirstMount = useRef(true);
 
   const scrollToBottom = () => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (outputAreaRef.current) {
+      outputAreaRef.current.scrollTo({
+        top: outputAreaRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   };
 
   useEffect(() => {
@@ -159,7 +165,7 @@ export default function TerminalWidget() {
       </div>
 
       {/* Terminal Output Area */}
-      <div className="p-5 min-h-60 max-h-80 overflow-y-auto text-sm space-y-2 select-text custom-scrollbar">
+      <div ref={outputAreaRef} className="p-5 min-h-60 max-h-80 overflow-y-auto text-sm space-y-2 select-text custom-scrollbar">
         {history.map((line, idx) => (
           <div 
             key={idx} 

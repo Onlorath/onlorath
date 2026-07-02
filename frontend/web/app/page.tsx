@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Database, Server, GitBranch, Layout, ChevronRight, Mail } from 'lucide-react';
+import { Terminal, Database, Server, GitBranch, Layout, ChevronRight, Mail, FileText } from 'lucide-react';
 import TerminalWidget from '../components/TerminalWidget';
 import ContactForm from '../components/ContactForm';
 import Rocket3D from '../components/Rocket3D';
@@ -118,23 +118,23 @@ const Starfield = () => {
 
 export default function App() {
   const skills = [
-    { category: "Core Systems", icon: <Server className="w-5 h-5 text-cyan-400" />, items: ["Go (Golang)", "PostgreSQL", "Linux / Nginx", "Docker"] },
-    { category: "Interface", icon: <Layout className="w-5 h-5 text-fuchsia-400" />, items: ["React", "Next.js", "Tailwind CSS", "TypeScript"] },
-    { category: "AI & Data", icon: <Database className="w-5 h-5 text-indigo-400" />, items: ["Python", "FastAPI", "Microservices"] }
+    { category: "Core Systems", icon: <Server className="w-5 h-5 text-cyan-400" />, items: ["Go (Golang) / NestJS", "PostgreSQL / MongoDB", "Linux / Nginx / Redis", "Docker / Kubernetes"] },
+    { category: "Interface & State", icon: <Layout className="w-5 h-5 text-fuchsia-400" />, items: ["React / Next.js", "Redux / Redux Toolkit", "Tailwind CSS / TypeScript", "JavaScript (ES6+)"] },
+    { category: "AI & Cloud Integration", icon: <Database className="w-5 h-5 text-indigo-400" />, items: ["OpenAI & Gemini APIs", "RAG (Retrieval-Augmented)", "FastAPI / Python", "AWS / Azure / GCP"] }
   ];
 
   const projects = [
+    {
+      title: "Muzigin.com — AI Music Platform",
+      tech: ["NestJS", "TypeScript", "Gemini API", "k3s", "Param Gateway"],
+      description: "NestJS tabanlı mikroservis mimarisine sahip, Sonauto, Gemini ve AudD API entegrasyonlarıyla otomatik müzik üretimi ve telif doğrulaması yapan, Param ödeme altyapılı ve k3s (Kubernetes) üzerinde koşan yapay zeka müzik platformu.",
+      status: "In Orbit"
+    },
     {
       title: "Core API Architecture",
       tech: ["Go", "PostgreSQL", "Clean Architecture", "JWT"],
       description: "Hexagonal mimari prensipleriyle sıfırdan yazılmış, ORM kullanılmadan sqlx ile optimize edilmiş ve HttpOnly cookie tabanlı güvenli JWT rotasyonuna sahip kurumsal seviye backend sistemi.",
       status: "Landed"
-    },
-    {
-      title: "Polyglot AI Microservice",
-      tech: ["Go", "Python", "Docker", "Nginx"],
-      description: "Go tabanlı ana API Gateway üzerinden iç ağda Python tabanlı yapay zeka servisine (FastAPI) bağlanan, konteynerize edilmiş çok dilli (polyglot) mikroservis laboratuvarı.",
-      status: "In Orbit"
     }
   ];
 
@@ -172,11 +172,19 @@ export default function App() {
                 </span>
               </h1>
               <p className="text-lg text-slate-400 max-w-xl leading-relaxed mb-8">
-                Performanslı backend sistemleri tasarlıyor, modern arayüzler inşa ediyor ve farklı teknolojileri (Go, React, Python) aynı ekosistemde buluşturan ölçeklenebilir altyapılar kuruyorum. 
+                2.5 yıldan fazla profesyonel deneyime sahip Full Stack Geliştirici olarak GoLang, TypeScript, NestJS ve React kullanarak performanslı mikroservis mimarileri tasarlıyor, yapay zeka entegrasyonları kuruyor ve Kubernetes/Docker altyapı yönetimiyle ölçeklenebilir sistemler inşa ediyorum.
               </p>
-              <div className="flex space-x-4 mb-4">
+              <div className="flex flex-wrap gap-4 mb-4">
                 <a href="#projects" className="px-5 py-3 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all font-medium flex items-center text-sm">
                   Sistemleri İncele <ChevronRight className="w-4 h-4 ml-1.5" />
+                </a>
+                <a 
+                  href="/CV.pdf" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="px-5 py-3 rounded-lg bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 hover:bg-fuchsia-500/20 transition-all font-medium flex items-center text-sm"
+                >
+                  CV'mi Görüntüle <FileText className="w-4 h-4 ml-1.5" />
                 </a>
                 <a href="#contact" className="px-5 py-3 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800 transition-all font-medium flex items-center border border-slate-800/80 text-sm">
                   <Mail className="w-4 h-4 mr-1.5" /> İletişim
