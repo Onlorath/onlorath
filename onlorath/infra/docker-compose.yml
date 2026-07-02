@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: onlorath_postgres
+    environment:
+      POSTGRES_USER: onlorath_admin
+      POSTGRES_PASSWORD: super_secret_password_123
+      POSTGRES_DB: onlorath_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - onlorath_network
+
+volumes:
+  postgres_data:
+
+networks:
+  onlorath_network:
+    driver: bridge
