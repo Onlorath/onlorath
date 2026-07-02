@@ -19,12 +19,17 @@ export default function TerminalWidget() {
   
   const terminalEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isFirstMount = useRef(true);
 
   const scrollToBottom = () => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     scrollToBottom();
   }, [history]);
 
