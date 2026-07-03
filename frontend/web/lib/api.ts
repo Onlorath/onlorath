@@ -35,6 +35,19 @@ api.interceptors.request.use(
     if (_accessToken && config.headers) {
       config.headers.Authorization = `Bearer ${_accessToken}`;
     }
+
+    // Inject guest session ID if stored in localStorage (safe for server-side rendering check)
+    if (typeof window !== 'undefined') {
+      let sessionID = localStorage.getItem('guest_session_id');
+      if (!sessionID) {
+        sessionID = 'guest_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('guest_session_id', sessionID);
+      }
+      if (config.headers) {
+        config.headers['X-Session-ID'] = sessionID;
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -132,3 +145,17 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export const chatAPI = {
+  sendMessage: (data: { conversation_id?: string; message: string }) =>
+    api.post<{ conversation_id: string; reply: string; title?: string }>('/api/v1/chat/send', data),
+
+  listConversations: () =>
+    api.get<Array<{ id: string; title: string; created_at: string; updated_at: string }>>('/api/v1/chat/conversations'),
+
+  getMessages: (conversationId: string) =>
+    api.get<Array<{ id: string; role: string; content: string; created_at: string }>>(`/api/v1/chat/conversations/${conversationId}`),
+
+  deleteConversation: (conversationId: string) =>
+    api.delete(`/api/v1/chat/conversations/${conversationId}`),
+};

@@ -5,6 +5,7 @@ import { Terminal, Database, Server, GitBranch, Layout, ChevronRight, Mail, File
 import TerminalWidget from '../components/TerminalWidget';
 import ContactForm from '../components/ContactForm';
 import Rocket3D from '../components/Rocket3D';
+import ChatWidget from '../components/ChatWidget';
 
 // Custom SVG components to replace brand icons
 const Github = ({ className }: { className?: string }) => (
@@ -145,6 +146,7 @@ export default function App() {
       <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#050505] to-[#050505]"></div>
       <Starfield />
       <Rocket3D />
+      <ChatWidget />
 
       <div className="relative z-10 flex flex-col min-h-screen">
         <nav className="border-b border-white/5 bg-[#050505]/50 backdrop-blur-md sticky top-0 z-50">

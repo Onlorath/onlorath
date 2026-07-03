@@ -367,7 +367,7 @@ export default function Rocket3D() {
   return (
     <div 
       ref={containerRef} 
-      className="fixed -right-2 top-0 h-screen w-48 z-50 pointer-events-none"
+      className="hidden md:block fixed -right-2 top-0 h-screen w-48 z-50 pointer-events-none"
     />
   );
 }
