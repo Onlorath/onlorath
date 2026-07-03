@@ -52,21 +52,21 @@ func (u *chatUseCase) SendMessage(ctx context.Context, userID string, sessionID 
 		return nil, errors.New("message cannot be empty")
 	}
 
-	// Check global request quota (Limit to 15 messages in total)
+	// Check global request quota (Limit to 50 messages in total)
 	globalCount, err := u.chatRepo.CountAllUserMessages(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if globalCount >= 15 {
+	if globalCount >= 50 {
 		return nil, domain.ErrGlobalLimitReached
 	}
 
-	// Check user personal quota (5 messages)
+	// Check user personal quota (15 messages)
 	count, err := u.chatRepo.CountMessagesBySessionOrUser(ctx, userID, sessionID)
 	if err != nil {
 		return nil, err
 	}
-	if count >= 5 {
+	if count >= 15 {
 		return nil, domain.ErrChatLimitReached
 	}
 
@@ -239,14 +239,14 @@ func (u *chatUseCase) CheckQuota(ctx context.Context, userID string, sessionID s
 	if err != nil {
 		return false, false, err
 	}
-	globalReached := globalCount >= 15
+	globalReached := globalCount >= 50
 
 	// 2. Check personal limit
 	personalCount, err := u.chatRepo.CountMessagesBySessionOrUser(ctx, userID, sessionID)
 	if err != nil {
 		return false, false, err
 	}
-	personalReached := personalCount >= 5
+	personalReached := personalCount >= 15
 
 	return globalReached, personalReached, nil
 }

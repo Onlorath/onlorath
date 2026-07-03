@@ -163,6 +163,7 @@ func (r *chatRepository) CountMessagesBySessionOrUser(ctx context.Context, userI
 			FROM messages m
 			JOIN conversations c ON m.conversation_id = c.id
 			WHERE c.user_id = $1 AND m.role = 'user'
+			  AND m.created_at > NOW() - INTERVAL '24 hours'
 		`
 		err = r.db.GetContext(ctx, &count, query, userID)
 	} else {
@@ -171,6 +172,7 @@ func (r *chatRepository) CountMessagesBySessionOrUser(ctx context.Context, userI
 			FROM messages m
 			JOIN conversations c ON m.conversation_id = c.id
 			WHERE c.session_id = $1 AND c.user_id IS NULL AND m.role = 'user'
+			  AND m.created_at > NOW() - INTERVAL '24 hours'
 		`
 		err = r.db.GetContext(ctx, &count, query, sessionID)
 	}
@@ -188,6 +190,7 @@ func (r *chatRepository) CountAllUserMessages(ctx context.Context) (int, error) 
 		FROM messages m
 		JOIN conversations c ON m.conversation_id = c.id
 		WHERE m.role = 'user'
+		  AND m.created_at > NOW() - INTERVAL '24 hours'
 	`
 	err := r.db.GetContext(ctx, &count, query)
 	if err != nil {
