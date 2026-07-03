@@ -178,7 +178,6 @@ export default function App() {
                   İletişime Geç (Email)
                 </a>
               </div>
-              <p className="text-xs font-mono text-cyan-500/70">Ateşlemeyi başlatmak için aşağı kaydırın ↓</p>
             </div>
 
             {/* Interactive Terminal Widget */}

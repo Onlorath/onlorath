@@ -331,7 +331,7 @@ export default function ChatWidget() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="p-3.5 rounded-full bg-gradient-to-br from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/20 border border-cyan-400/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center relative group"
-        title="Gemini AI Chat"
+        title="Onloraht Chatbot"
       >
         {isOpen ? <X className="w-5 h-5" /> : <MessageCircle className="w-5 h-5 animate-pulse" />}
         

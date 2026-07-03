@@ -48,12 +48,12 @@ export default function Rocket3D() {
     // --- 3. Build Procedural Premium Rocket ---
     const rocketGroup = new THREE.Group();
 
-    // Materials
+    // Materials (Smooth shaded, premium metallic finishes)
     const bodyMaterial = new THREE.MeshStandardMaterial({
       color: 0x2d3748, // Metal slate-grey
-      metalness: 0.85,
-      roughness: 0.25,
-      flatShading: true,
+      metalness: 0.88,
+      roughness: 0.22,
+      flatShading: false,
     });
 
     const neonCyanMaterial = new THREE.MeshStandardMaterial({
@@ -62,7 +62,7 @@ export default function Rocket3D() {
       emissiveIntensity: 0.6,
       metalness: 0.2,
       roughness: 0.1,
-      flatShading: true,
+      flatShading: false,
     });
 
     const neonFuchsiaMaterial = new THREE.MeshStandardMaterial({
@@ -71,14 +71,14 @@ export default function Rocket3D() {
       emissiveIntensity: 0.6,
       metalness: 0.2,
       roughness: 0.1,
-      flatShading: true,
+      flatShading: false,
     });
 
     const engineMaterial = new THREE.MeshStandardMaterial({
       color: 0x1a202c,
       metalness: 0.95,
       roughness: 0.15,
-      flatShading: true,
+      flatShading: false,
     });
 
     const windowGlassMaterial = new THREE.MeshStandardMaterial({
@@ -103,48 +103,66 @@ export default function Rocket3D() {
       blending: THREE.AdditiveBlending,
     });
 
-    // 3.1. Main Fuselage (Ana Gövde)
-    const bodyGeo = new THREE.CylinderGeometry(0.35, 0.45, 1.8, 6);
+    // 3.1. Main Fuselage (Bulging curved body for sleek spaceship vibe)
+    const bodyPoints = [];
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20;
+      const y = -0.9 + t * 1.8; // Y ranges from -0.9 to 0.9
+      // Bulges outwards in the middle
+      const radius = 0.38 + 0.08 * Math.sin(t * Math.PI);
+      bodyPoints.push(new THREE.Vector2(radius, y));
+    }
+    const bodyGeo = new THREE.LatheGeometry(bodyPoints, 32);
     const bodyMesh = new THREE.Mesh(bodyGeo, bodyMaterial);
-    bodyMesh.position.y = 0;
     rocketGroup.add(bodyMesh);
 
-    // 3.2. Nose Cone (Burun Kısmı)
-    const noseGeo = new THREE.ConeGeometry(0.35, 0.7, 6);
+    // 3.2. Nose Cone (Elegant Gothic arch/Ogive curved nose tip)
+    const nosePoints = [];
+    const noseHeight = 0.75;
+    for (let i = 0; i <= 15; i++) {
+      const t = i / 15;
+      const y = t * noseHeight;
+      // Smooth taper from 0.38 to 0
+      const radius = 0.38 * Math.cos(t * Math.PI / 2);
+      nosePoints.push(new THREE.Vector2(radius, y));
+    }
+    const noseGeo = new THREE.LatheGeometry(nosePoints, 32);
     const noseMesh = new THREE.Mesh(noseGeo, neonFuchsiaMaterial);
-    noseMesh.position.y = 1.25; 
+    noseMesh.position.y = 0.9; 
     rocketGroup.add(noseMesh);
 
-    // 3.3. Glowing Decorative Rings (Gövde Üzerindeki Neon Halkalar)
-    const ringGeo1 = new THREE.CylinderGeometry(0.46, 0.46, 0.06, 6, 1);
+    // 3.3. Glowing Decorative Rings (Rounded Torus rings hugging the body curves)
+    const ringGeo1 = new THREE.TorusGeometry(0.465, 0.025, 16, 48);
     const ring1 = new THREE.Mesh(ringGeo1, neonFuchsiaMaterial);
     ring1.position.y = -0.1;
+    ring1.rotation.x = Math.PI / 2;
     rocketGroup.add(ring1);
 
-    const ringGeo2 = new THREE.CylinderGeometry(0.39, 0.39, 0.06, 6, 1);
+    const ringGeo2 = new THREE.TorusGeometry(0.44, 0.025, 16, 48);
     const ring2 = new THREE.Mesh(ringGeo2, neonCyanMaterial);
     ring2.position.y = 0.5;
+    ring2.rotation.x = Math.PI / 2;
     rocketGroup.add(ring2);
 
-    // 3.4. Glass Cockpit Window (Kokpit Penceresi)
-    const windowGeo = new THREE.SphereGeometry(0.12, 8, 8);
+    // 3.4. Glass Cockpit Window (Stretched sleek space canopy)
+    const windowGeo = new THREE.SphereGeometry(0.14, 32, 32);
     const windowMesh = new THREE.Mesh(windowGeo, windowGlassMaterial);
-    windowMesh.position.set(0, 0.6, 0.36);
-    windowMesh.scale.set(1.0, 1.0, 0.4); // Flatten sphere against fuselage
+    windowMesh.position.set(0, 0.55, 0.33);
+    windowMesh.scale.set(1.0, 1.4, 0.5); 
     rocketGroup.add(windowMesh);
 
-    // 3.5. Side Boosters (Yanal Yardımcı Roketler)
-    const boosterGeo = new THREE.CylinderGeometry(0.12, 0.15, 0.9, 5);
-    const boosterNoseGeo = new THREE.ConeGeometry(0.12, 0.25, 5);
-    const boosterEngineGeo = new THREE.CylinderGeometry(0.08, 0.12, 0.12, 5);
+    // 3.5. Side Boosters (Sleek aerodynamic capsules)
+    const boosterGeo = new THREE.CylinderGeometry(0.11, 0.13, 0.9, 32);
+    const boosterNoseGeo = new THREE.SphereGeometry(0.11, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const boosterEngineGeo = new THREE.CylinderGeometry(0.07, 0.10, 0.15, 32);
 
     const leftBooster = new THREE.Group();
     leftBooster.position.set(-0.42, -0.3, 0);
     const leftBoosterMesh = new THREE.Mesh(boosterGeo, bodyMaterial);
     const leftBoosterNose = new THREE.Mesh(boosterNoseGeo, neonFuchsiaMaterial);
-    leftBoosterNose.position.y = 0.575;
+    leftBoosterNose.position.y = 0.45;
     const leftBoosterEngine = new THREE.Mesh(boosterEngineGeo, engineMaterial);
-    leftBoosterEngine.position.y = -0.51;
+    leftBoosterEngine.position.y = -0.525;
     leftBooster.add(leftBoosterMesh, leftBoosterNose, leftBoosterEngine);
     rocketGroup.add(leftBooster);
 
@@ -152,38 +170,64 @@ export default function Rocket3D() {
     rightBooster.position.set(0.42, -0.3, 0);
     const rightBoosterMesh = new THREE.Mesh(boosterGeo, bodyMaterial);
     const rightBoosterNose = new THREE.Mesh(boosterNoseGeo, neonFuchsiaMaterial);
-    rightBoosterNose.position.y = 0.575;
+    rightBoosterNose.position.y = 0.45;
     const rightBoosterEngine = new THREE.Mesh(boosterEngineGeo, engineMaterial);
-    rightBoosterEngine.position.y = -0.51;
+    rightBoosterEngine.position.y = -0.525;
     rightBooster.add(rightBoosterMesh, rightBoosterNose, rightBoosterEngine);
     rocketGroup.add(rightBooster);
 
-    // 3.6. Fins / Wings (Kanatlar - 3-way symmetry around the base)
-    const finGeo = new THREE.BoxGeometry(0.06, 0.65, 0.35);
+    // 3.6. Fins / Wings (Sleek custom-extruded aerodynamic swept-back wings)
+    const finShape = new THREE.Shape();
+    finShape.moveTo(0, 0.32);
+    finShape.quadraticCurveTo(0.15, 0.2, 0.38, -0.1);
+    finShape.lineTo(0.35, -0.2);
+    finShape.quadraticCurveTo(0.15, -0.25, 0, -0.32);
+    finShape.closePath();
+
+    const extrudeSettings = {
+      depth: 0.02,
+      bevelEnabled: true,
+      bevelSegments: 3,
+      steps: 1,
+      bevelSize: 0.015,
+      bevelThickness: 0.015,
+    };
+    const finGeo = new THREE.ExtrudeGeometry(finShape, extrudeSettings);
+    finGeo.translate(0, 0, -0.01); // Center the thickness around z=0
+    finGeo.rotateY(Math.PI / 2); // Rotate to stick out radially
+
     for (let i = 0; i < 3; i++) {
       const angle = (i * 2 * Math.PI) / 3;
       const finMesh = new THREE.Mesh(finGeo, neonCyanMaterial);
       
       finMesh.position.set(
-        Math.cos(angle) * 0.45,
+        Math.cos(angle) * 0.40,
         -0.7,
-        Math.sin(angle) * 0.45
+        Math.sin(angle) * 0.40
       );
       finMesh.rotation.y = -angle;
       finMesh.rotation.z = 0.22; 
       rocketGroup.add(finMesh);
     }
 
-    // 3.7. Main Engine Bell (Ana Motor Çıkışı)
-    const engineGeo = new THREE.CylinderGeometry(0.25, 0.35, 0.3, 6);
+    // 3.7. Main Engine Bell (Curved, flared space engine nozzle)
+    const enginePoints = [];
+    const engineHeight = 0.3;
+    for (let i = 0; i <= 15; i++) {
+      const t = i / 15;
+      const y = -t * engineHeight;
+      const radius = 0.22 + 0.1 * Math.pow(t, 2);
+      enginePoints.push(new THREE.Vector2(radius, y));
+    }
+    const engineGeo = new THREE.LatheGeometry(enginePoints, 32);
     const engineMesh = new THREE.Mesh(engineGeo, engineMaterial);
-    engineMesh.position.y = -1.05;
+    engineMesh.position.y = -0.9;
     rocketGroup.add(engineMesh);
 
-    // 3.8. Main & Booster Flames (Ana ve Yan Roket Alevleri)
-    const flameGeo = new THREE.ConeGeometry(0.2, 0.9, 6);
+    // 3.8. Main & Booster Flames (Smoothed high-poly engines flames)
+    const flameGeo = new THREE.ConeGeometry(0.2, 0.9, 32);
     flameGeo.translate(0, -0.45, 0); 
-    const innerFlameGeo = new THREE.ConeGeometry(0.1, 0.5, 6);
+    const innerFlameGeo = new THREE.ConeGeometry(0.1, 0.5, 32);
     innerFlameGeo.translate(0, -0.25, 0);
 
     // Main Engine Flame
@@ -195,8 +239,8 @@ export default function Rocket3D() {
     mainInnerFlame.position.y = -1.2;
     rocketGroup.add(mainInnerFlame);
 
-    // Side Booster Flames (Smaller)
-    const boosterFlameGeo = new THREE.ConeGeometry(0.08, 0.4, 5);
+    // Side Booster Flames (Smaller, smooth)
+    const boosterFlameGeo = new THREE.ConeGeometry(0.08, 0.4, 32);
     boosterFlameGeo.translate(0, -0.2, 0);
 
     const leftFlame = new THREE.Mesh(boosterFlameGeo, flameMaterial);
