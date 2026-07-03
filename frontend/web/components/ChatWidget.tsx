@@ -29,6 +29,8 @@ export default function ChatWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const [isConversationsLoading, setIsConversationsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
+  const [isSystemBusy, setIsSystemBusy] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -53,11 +55,19 @@ export default function ChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
+  const checkHeaders = (headers: any) => {
+    if (headers) {
+      setIsSystemBusy(headers['x-chat-system-busy'] === 'true');
+      setIsQuotaExceeded(headers['x-chat-quota-exceeded'] === 'true');
+    }
+  };
+
   const loadConversations = async () => {
     setIsConversationsLoading(true);
     try {
       const res = await chatAPI.listConversations();
       setConversations(res.data);
+      checkHeaders(res.headers);
     } catch (err) {
       console.error('Failed to load conversations:', err);
     } finally {
@@ -69,6 +79,9 @@ export default function ChatWidget() {
     try {
       const res = await chatAPI.getMessages(convId);
       setMessages(res.data);
+      checkHeaders(res.headers);
+      const userMsgCount = res.data.filter((m: any) => m.role === 'user').length;
+      setIsQuotaExceeded(userMsgCount >= 5);
     } catch (err) {
       console.error('Failed to load messages:', err);
     }
@@ -98,6 +111,7 @@ export default function ChatWidget() {
       });
 
       const { conversation_id, reply, title } = res.data;
+      checkHeaders(res.headers);
 
       // Add model response message
       const tempModelMsg: Message = {
@@ -106,7 +120,14 @@ export default function ChatWidget() {
         content: reply,
         created_at: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, tempModelMsg]);
+      
+      const newMessages = [...messages, tempUserMsg, tempModelMsg];
+      setMessages(newMessages);
+
+      const userMsgCount = newMessages.filter((m) => m.role === 'user').length;
+      if (userMsgCount >= 5) {
+        setIsQuotaExceeded(true);
+      }
 
       // If it's a new conversation, update current ID and refresh list
       if (!currentConvId) {
@@ -115,11 +136,14 @@ export default function ChatWidget() {
       }
     } catch (err: any) {
       console.error('Failed to send message:', err);
+      checkHeaders(err.response?.headers);
+      
+      const errorMessage = err.response?.data?.error || err.message || 'Could not reach chatbot service.';
       // Show error in chat
       const tempErrorMsg: Message = {
         id: Math.random().toString(),
         role: 'model',
-        content: `Error: ${err.message || 'Could not reach chatbot service.'}`,
+        content: `Error: ${errorMessage}`,
         created_at: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, tempErrorMsg]);
@@ -132,6 +156,8 @@ export default function ChatWidget() {
     setCurrentConvId(null);
     setMessages([]);
     setShowHistory(false);
+    setIsQuotaExceeded(false);
+    setIsSystemBusy(false);
   };
 
   const handleDeleteConversation = async (convId: string, e: React.MouseEvent) => {
@@ -304,26 +330,37 @@ export default function ChatWidget() {
           </div>
 
           {/* Footer Input */}
-          <form onSubmit={handleSendMessage} className="p-3 border-t border-white/5 bg-[#080c14] flex items-center space-x-2">
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Gemini'ye sorun..."
-              className="flex-grow p-2 bg-[#0e1424]/60 border border-white/5 hover:border-white/10 focus:border-cyan-500/50 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none transition-all"
-              disabled={isLoading}
-            />
-            <button
-              type="submit"
-              disabled={!inputMessage.trim() || isLoading}
-              className={`p-2 rounded-xl text-white transition-all ${
-                !inputMessage.trim() || isLoading
-                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                  : 'bg-gradient-to-br from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 shadow-md shadow-cyan-500/10'
-              }`}
-            >
-              <Send className="w-3.5 h-3.5" />
-            </button>
+          <form onSubmit={handleSendMessage} className="p-3 border-t border-white/5 bg-[#080c14] flex flex-col space-y-2">
+            {isSystemBusy ? (
+              <div className="text-[10px] text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2 text-center font-mono">
+                Şu anda yoğunluk var o yüzden kullanılamıyor.
+              </div>
+            ) : isQuotaExceeded ? (
+              <div className="text-[10px] text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2 text-center font-mono">
+                Sohbet kotanız (5 mesaj) dolmuştur. Yusuf'a ulaşmak için lütfen iletişim formunu kullanın.
+              </div>
+            ) : null}
+            <div className="flex items-center space-x-2 w-full">
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                placeholder={isSystemBusy || isQuotaExceeded ? "Sohbet devre dışı..." : "Gemini'ye sorun..."}
+                className="flex-grow p-2 bg-[#0e1424]/60 border border-white/5 hover:border-white/10 focus:border-cyan-500/50 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none transition-all disabled:opacity-55"
+                disabled={isLoading || isSystemBusy || isQuotaExceeded}
+              />
+              <button
+                type="submit"
+                disabled={!inputMessage.trim() || isLoading || isSystemBusy || isQuotaExceeded}
+                className={`p-2 rounded-xl text-white transition-all ${
+                  !inputMessage.trim() || isLoading || isSystemBusy || isQuotaExceeded
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                    : 'bg-gradient-to-br from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 shadow-md shadow-cyan-500/10'
+                }`}
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </form>
         </div>
 
