@@ -1,49 +1,92 @@
-# Workspace Architecture & History
+# Workspace Architecture & Agent Instructions
 
-This document outlines the architecture and details of both the backend and frontend components implemented in this workspace.
-
----
-
-## 1. Backend (Go Clean Architecture)
-- **Language/Runtime**: Go 1.22+ (Running `go1.26.4` locally on macOS Apple Silicon).
-- **Directory**: `backend/`
-- **Architecture Pattern**: Clean Architecture (Hexagonal Architecture) separating delivery handler, domain entity, usecase logic, and repository adapter.
-- **Database**: PostgreSQL (Docker container `onlorath_postgres` on port `5432`) connected using `sqlx` (without ORM).
-- **Auth Scheme**: JWT authentication.
-  - **Access Token**: Signed using HS256, returned in the HTTP JSON response body. Validated via middleware on protected endpoints.
-  - **Refresh Token**: Signed using HS256, set inside an `HttpOnly` cookie (`refresh_token`) by the server.
-
-### Backend Endpoints
-- `POST /api/v1/users/register`: Creates a user with a hashed password.
-- `POST /api/v1/users/login`: Authenticates user, returns the Access Token, and sets the Refresh Token cookie.
-- `POST /api/v1/users/refresh`: Validates refresh token cookie and issues a new access token.
-- `GET /api/v1/users/me`: Protected endpoint that returns user payload after checking JWT.
+This workspace contains a Go (Clean Architecture) backend and a Next.js App Router frontend. Refer to this map to minimize token usage and redundant tool calls.
 
 ---
 
-## 2. Frontend (Next.js App Router & Tailwind CSS)
-- **Language/Runtime**: React 19 / Next.js 16 (TypeScript).
-- **Directory**: `frontend/web/`
-- **Styling**: Tailwind CSS with custom styling and gradients.
-- **Key Modules**:
-  - `axios`: For HTTP communications.
-  - `zod` & `react-hook-form` & `@hookform/resolvers`: For validated user interactions.
-  - `lucide-react`: For premium icon components.
+## 🗺️ Project Structure Map
 
-### Layout & Pages
-- **Public Portfolio Page (`app/page.tsx`)**:
-  - Acts as the main landing page. Bypasses session redirects to allow instant public guest access.
-  - Features side-by-side Hero area and an interactive custom terminal simulation widget.
-  - Integrates technology stacks list and a contact form section.
-- **Projects Page (`app/projects/page.tsx`)**:
-  - Dedicated route displaying "Mimari & Projeler" (Architecture & Projects) cards.
-  - Displays project status tags, tech stacks, and brief systems architecture descriptions.
-  - Integrates back-navigation links to return to the home page.
-- **Interactive Terminal Widget (`components/TerminalWidget.tsx`)**:
-  - Simulated Unix zsh terminal supporting typing commands (`help`, `neofetch`, `skills`, `projects`, `about`, `contact`, `clear`).
-  - Supports keyboard cycling through command history using the Up and Down arrow keys.
-- **Contact Form Component (`components/ContactForm.tsx`)**:
-  - Custom form with validation error handling (name, email format, and message length validation).
-  - Handles simulation states for sending request and displaying checkmarks on success.
-- **Auth Features (`context/AuthContext.tsx` & `lib/api.ts`)**:
-  - Auth components (`/login` and `/register` pages) are preserved, but automatic redirect to `/login` is disabled during session verification failures so public visitors are never locked out of the homepage.
+```
+.
+├── backend/
+│   ├── cmd/api/main.go             # Backend Entry Point
+│   ├── config/config.go            # Config Loader (.env)
+│   └── internal/
+│       ├── delivery/http/
+│       │   ├── router.go           # Route definitions (chi)
+│       │   ├── handler/            # Controllers (user_handler.go)
+│       │   └── middleware/         # Auth (JWT verification)
+│       ├── domain/
+│       │   └── user.go             # Entities, Requests, Interfaces
+│       ├── pkg/
+│       │   ├── bcrypt/             # Password hashing
+│       │   └── jwt/                # Access/Refresh token generators
+│       ├── repository/postgres/    # Database queries (sqlx)
+│       └── usecase/                # Business logic (user_usecase.go)
+├── frontend/web/                   # Next.js App Router (React 19, TS)
+│   ├── app/
+│   │   ├── page.tsx                # Portfolio Landing Page
+│   │   ├── projects/page.tsx       # Projects Page
+│   │   ├── login/page.tsx          # Login Page
+│   │   ├── register/page.tsx       # Register Page
+│   │   └── globals.css             # Main styling
+│   ├── components/
+│   │   ├── ContactForm.tsx         # Portfolio Contact Form
+│   │   └── TerminalWidget.tsx      # Landing page Terminal Simulation
+│   ├── context/AuthContext.tsx     # Auth State Manager
+│   └── lib/api.ts                  # Axios interceptors & endpoints
+└── onlorath/
+    └── infra/
+        ├── docker-compose.yml      # Dev environment Postgres setup
+        └── init.sql                # DB Schema and Extensions
+```
+
+---
+
+## 🗄️ Database Schema & Connection
+
+- **Provider**: PostgreSQL (`onlorath_postgres` container on `localhost:5432`).
+- **Connection Details**: DB Name: `onlorath_db`, User: `onlorath_admin`, Pass: `super_secret_password_123`.
+- **Primary Schema (`users` table)**:
+  ```sql
+  CREATE TABLE users (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash VARCHAR(255) NOT NULL,
+      role VARCHAR(50) DEFAULT 'user',
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  );
+  ```
+
+---
+
+## ⚙️ App Configurations & Ports
+
+- **Backend**: Chi router runs on `:8080`. Connects to DB via `sqlx`.
+- **Frontend**: Next.js development server runs on `:3000` (currently running `npm run dev`).
+- **Auth Tokens**: JWT-based.
+  - Access Token: HS256, expiration `15m`, returned in response body.
+  - Refresh Token: HS256, expiration `168h`, set in HttpOnly cookie `refresh_token`.
+
+---
+
+## 🛠️ CLI Operations Reference
+
+- **Backend Dev Server**: `go run cmd/api/main.go` (run from `backend/`)
+- **Backend Tests**: `go test ./...` (run from `backend/`)
+- **Frontend Dev Server**: `npm run dev` (run from `frontend/web/`)
+- **Start Postgres**: `docker compose up -d` (run from `onlorath/infra/`)
+
+---
+
+## 🚀 Token Saving & Tool Usage Rules (Strictly Enforced)
+
+To prevent wasting tokens and keeping conversations concise, agents MUST adhere to these rules:
+
+1. **No Redundant Discovery**: Do NOT use `list_dir` or `grep_search` to find directories or locate files outlined in the map above. Go directly to the target file.
+2. **Strict Range-Based Reads**: Never read whole source files if only a block is needed. Use `StartLine` and `EndLine` parameters in `view_file` to query specific line segments.
+3. **Avoid Whole-File Overwrites**: Use `replace_file_content` or `multi_replace_file_content` for precise target edits. Do not overwrite the entire file unless creating a new one.
+4. **Skip Planning Mode for Simple Edits**: If a request is simple (debugging, minor logic tweak, configuration change, explanation), do NOT create an `implementation_plan.md`. Go straight to execution.
+5. **No Verbose Artifact Summaries**: When creating or editing plans, tasks, or walkthroughs, do not restate the contents of the artifact in the response. Simply present the markdown file link and highlight immediate questions.
+6. **Minimize Command Output**: Run commands with precise filters or limits (e.g. `git log -n 5`, targeted tests, only relevant logs).

@@ -39,10 +39,16 @@ const Linkedin = ({ className }: { className?: string }) => (
 export default function ProjectsPage() {
   const projects = [
     {
+      title: "Muzigin.com — AI Music Platform",
+      tech: ["NestJS", "TypeScript", "Gemini API", "k3s", "Param Gateway"],
+      description: "NestJS tabanlı mikroservis mimarisine sahip, Sonauto, Gemini ve AudD API entegrasyonlarıyla otomatik müzik üretimi ve telif doğrulaması yapan, Param ödeme altyapılı ve k3s (Kubernetes) üzerinde koşan yapay zeka müzik platformu.",
+      status: "In Orbit"
+    },
+    {
       title: "Core API Architecture",
       tech: ["Go", "PostgreSQL", "Clean Architecture", "JWT"],
       description: "Hexagonal mimari prensipleriyle sıfırdan yazılmış, ORM kullanılmadan sqlx ile optimize edilmiş ve HttpOnly cookie tabanlı güvenli JWT rotasyonuna sahip kurumsal seviye backend sistemi.",
-      status: "Completed (Local)"
+      status: "Landed"
     },
     {
       title: "Polyglot AI Microservice",

@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Database, Server, GitBranch, Layout, ChevronRight, Mail, FileText } from 'lucide-react';
+import { Terminal, Database, Server, GitBranch, Layout, ChevronRight, FileText } from 'lucide-react';
 import TerminalWidget from '../components/TerminalWidget';
-import ContactForm from '../components/ContactForm';
 import Rocket3D from '../components/Rocket3D';
 import ChatWidget from '../components/ChatWidget';
+import Link from 'next/link';
 
 // Custom SVG components to replace brand icons
 const Github = ({ className }: { className?: string }) => (
@@ -124,20 +124,7 @@ export default function App() {
     { category: "AI & Cloud Integration", icon: <Database className="w-5 h-5 text-indigo-400" />, items: ["OpenAI & Gemini APIs", "RAG (Retrieval-Augmented)", "FastAPI / Python", "AWS / Azure / GCP"] }
   ];
 
-  const projects = [
-    {
-      title: "Muzigin.com — AI Music Platform",
-      tech: ["NestJS", "TypeScript", "Gemini API", "k3s", "Param Gateway"],
-      description: "NestJS tabanlı mikroservis mimarisine sahip, Sonauto, Gemini ve AudD API entegrasyonlarıyla otomatik müzik üretimi ve telif doğrulaması yapan, Param ödeme altyapılı ve k3s (Kubernetes) üzerinde koşan yapay zeka müzik platformu.",
-      status: "In Orbit"
-    },
-    {
-      title: "Core API Architecture",
-      tech: ["Go", "PostgreSQL", "Clean Architecture", "JWT"],
-      description: "Hexagonal mimari prensipleriyle sıfırdan yazılmış, ORM kullanılmadan sqlx ile optimize edilmiş ve HttpOnly cookie tabanlı güvenli JWT rotasyonuna sahip kurumsal seviye backend sistemi.",
-      status: "Landed"
-    }
-  ];
+
 
   return (
     <div className="min-h-screen bg-[#050505] text-slate-300 font-sans selection:bg-cyan-500/30 relative overflow-hidden">
@@ -157,8 +144,7 @@ export default function App() {
             <div className="flex space-x-6 text-sm font-medium">
               <a href="#about" className="hover:text-cyan-400 transition-colors">Yörünge</a>
               <a href="#skills" className="hover:text-cyan-400 transition-colors">Modüller</a>
-              <a href="#projects" className="hover:text-cyan-400 transition-colors">Sistemler</a>
-              <a href="#contact" className="hover:text-cyan-400 transition-colors">İletişim</a>
+              <Link href="/projects" className="hover:text-cyan-400 transition-colors">Sistemler</Link>
             </div>
           </div>
         </nav>
@@ -188,8 +174,8 @@ export default function App() {
                 >
                   CV'mi Görüntüle <FileText className="w-4 h-4 ml-1.5" />
                 </a>
-                <a href="#contact" className="px-5 py-3 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800 transition-all font-medium flex items-center border border-slate-800/80 text-sm">
-                  <Mail className="w-4 h-4 mr-1.5" /> İletişim
+                <a href="mailto:ysfalbayrak02@gmail.com" className="px-5 py-3 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800 transition-all font-medium flex items-center border border-slate-800/80 text-sm">
+                  İletişime Geç (Email)
                 </a>
               </div>
               <p className="text-xs font-mono text-cyan-500/70">Ateşlemeyi başlatmak için aşağı kaydırın ↓</p>
@@ -226,58 +212,32 @@ export default function App() {
             </div>
           </section>
 
-          <section id="projects" className="mb-48 scroll-mt-24">
-            <div className="flex items-end justify-between mb-8">
-              <h2 className="text-2xl font-bold text-white flex items-center drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">
-                <GitBranch className="w-6 h-6 mr-3 text-fuchsia-400" /> Mimari & Projeler
-              </h2>
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-6 md:pr-16"> {/* Roket için sağdan boşluk */}
-              {projects.map((project, idx) => (
-                <div key={idx} className="group bg-slate-900/40 border border-white/10 rounded-xl p-6 hover:border-fuchsia-500/50 hover:bg-slate-900/60 transition-all flex flex-col h-full relative overflow-hidden backdrop-blur-md">
-                  <div className="flex justify-between items-start mb-4 relative z-10">
-                    <h3 className="text-xl font-bold text-white tracking-wide">{project.title}</h3>
-                    <span className="text-xs font-mono px-2 py-1 bg-white/5 border border-white/10 rounded text-cyan-300">
-                      {project.status}
-                    </span>
-                  </div>
-                  <p className="text-slate-400 text-sm leading-relaxed mb-6 relative z-10 flex-grow">
-                    {project.description}
+          <section id="projects" className="mb-48 scroll-mt-24 md:pr-16">
+            <div className="bg-slate-900/30 border border-white/5 rounded-2xl p-8 backdrop-blur-md relative overflow-hidden group hover:border-cyan-500/30 transition-all duration-300">
+              <div className="absolute top-1/2 right-4 -translate-y-1/2 w-48 h-48 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-cyan-500/10 transition-all duration-300" />
+              
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 relative z-10">
+                <div className="space-y-3">
+                  <h2 className="text-2xl font-bold text-white flex items-center tracking-tight">
+                    <GitBranch className="w-6 h-6 mr-3 text-cyan-400 group-hover:rotate-12 transition-transform duration-300" /> 
+                    Mimari & Projeler
+                  </h2>
+                  <p className="text-slate-400 text-sm max-w-xl leading-relaxed">
+                    Sıfırdan tasarladığım k3s/Kubernetes müzik platformu (Muzigin.com), Clean Architecture Go kurumsal backend tasarımları ve mikroservis entegrasyonlarımı detaylı olarak inceleyin.
                   </p>
-                  <div className="flex flex-wrap gap-2 relative z-10 mt-auto">
-                    {project.tech.map((t, i) => (
-                      <span key={i} className="text-xs font-mono text-fuchsia-300 bg-fuchsia-500/10 border border-fuchsia-500/20 px-2 py-1 rounded">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
                 </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Contact Section */}
-          <section id="contact" className="mb-24 scroll-mt-24 grid md:grid-cols-12 gap-8 items-start relative z-10">
-            <div className="md:col-span-5 space-y-6">
-              <h2 className="text-2xl font-bold text-white flex items-center drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">
-                <Mail className="w-6 h-6 mr-3 text-cyan-400" /> Bağlantı Kurun
-              </h2>
-              <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
-                Sistem entegrasyonu, Go backend yapılandırmaları veya genel yazılım çözümleri hakkında görüşmek için aşağıdaki kanallardan ya da formu doldurarak iletişime geçebilirsiniz.
-              </p>
-              <div className="space-y-3 pt-2 font-mono text-sm">
-                <div className="flex items-center gap-2 text-slate-300 hover:text-cyan-400 transition-colors">
-                  <span className="text-slate-600">Email:</span>
-                  <a href="mailto:contact@onlorath.com" className="underline decoration-cyan-500/30">contact@onlorath.com</a>
-                </div>
+                
+                <Link 
+                  href="/projects" 
+                  className="px-6 py-3.5 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-white font-semibold flex items-center gap-2 shadow-lg shadow-cyan-500/10 active:scale-98 transition-all whitespace-nowrap text-sm"
+                >
+                  Tüm Projeleri İncele <ChevronRight className="w-4.5 h-4.5" />
+                </Link>
               </div>
             </div>
-
-            <div className="md:col-span-7 w-full relative z-10">
-              <ContactForm />
-            </div>
           </section>
+
+
 
         </main>
 

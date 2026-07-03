@@ -1,0 +1,60 @@
+23.06.2026 14:12Yusuf - Resume
+Sayfa 1 / 2f"le:///Users/macos/Downloads/CV-2.html
+YUSUF ALBAYRAK
+Istanbul, Turkey | +90 538 561 01 77 | ysfalbayrak02@gmail.com
+linkedin.com/in/yusuf-albayrak | github.com/onlorath
+PROFESSIONAL SUMMARY
+Full Stack Developer with 2.5+ years of professional experience building production-grade
+web applications using TypeScript, GoLang, NestJS, and React. Delivered microservices
+architectures with measurable impact — 40% faster API response times, 90%+ test
+coverage, and zero-downtime deployments. Hands-on experience integrating AI APIs
+(OpenAI, Gemini), managing cloud infrastructure with Docker and Kubernetes, and
+shipping subscription-based SaaS products end-to-end.
+TECHNICAL SKILLS
+Languages: GoLang, TypeScript, JavaScript
+Frameworks & Libraries: NestJS, Fastify, React, Node.js, Redux
+Databases & Caching: PostgreSQL, MongoDB, Redis, TypeORM
+DevOps & Cloud: Docker, Kubernetes (k3s/kubectl), CI/CD, AWS, Azure, GCP, Linux
+Server Administration
+AI & ML: OpenAI API, Gemini API, RAG (Retrieval-Augmented Generation), Ollama,
+LM Studio
+Concepts & Tools: RESTful APIs, Microservices Architecture, System Design,
+JWT/OTP Authentication, Git, Netgsm Integration
+PROJECTS
+Muzigin.com — AI Music Platform muzigin.com
+Lead Full Stack & Backend Engineer (Personal Project)Feb 2026 – Present
+Built the core backend architecture from scratch using NestJS and TypeScript, serving
+5+ frontend modules with REST APIs and reducing average response time to under
+200ms.
+Integrated 4 external AI and audio APIs (Sonauto, Gemini, AudD, Replicate), enabling
+automated music generation and copyright validation for 100% of uploaded content.
+Designed a multi-layered security system with JWT, OTP authentication, AES-256
+encryption, CORS policies, and rate limiting, achieving zero security incidents post-
+launch.
+Authored 159 unit tests across 13 test suites, reaching 90%+ code coverage for Auth,
+Content, AI, Cache, and JWT services.
+Implemented the Param payment gateway, processing monthly and annual
+subscriptions with a 99.5%+ transaction success rate.
+Deployed on a k3s cluster using kubectl, ensuring 99.9% uptime and zero-downtime
+database migrations.
+23.06.2026 14:12Yusuf - Resume
+Sayfa 2 / 2f"le:///Users/macos/Downloads/CV-2.html
+PROFESSIONAL EXPERIENCE
+Kartelam Istanbul, Turkey
+Full Stack Developer May 2023 – Dec 2025
+Led full-stack development of 3+ microservices using ReactJS and GoLang, reducing
+API response times by 40% through streamlined Service-Repository-API layering.
+Developed an AI-powered chatbot with OpenAI API, handling 100+ daily user queries
+with context-aware responses and 50%+ user satisfaction.
+Built advanced product filtering APIs using AI parsing, extracting precise parameters
+from complex queries and improving search accuracy by 60%.
+Refined frontend state management with Redux, reducing unnecessary re-renders by
+30% and improving page load performance.
+Architected MongoDB data models across 5+ collections, consolidating 3 legacy APIs
+into a single unified microservice.
+EDUCATION
+Istanbul Aydin University Istanbul, Turkey
+Associate Degree in Computer Programming (English-Medium)Sep 2022 – Jul 2025
+LANGUAGES
+Turkish: Native
+English: Upper-Intermediate (B2)

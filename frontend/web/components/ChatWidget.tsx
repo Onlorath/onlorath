@@ -279,7 +279,7 @@ export default function ChatWidget() {
                           : 'bg-[#0f1526]/80 border border-white/5 text-slate-300 rounded-tl-none'
                       }`}
                     >
-                      {msg.content}
+                      {renderMessageContent(msg.content)}
                     </div>
                   </div>
                 ))
@@ -344,4 +344,52 @@ export default function ChatWidget() {
       </button>
     </div>
   );
+}
+
+const renderMessageContent = (content: string) => {
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = linkRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(content.substring(lastIndex, match.index));
+    }
+
+    const linkText = match[1];
+    const linkUrl = match[2];
+
+    if (linkUrl.startsWith('/')) {
+      parts.push(
+        <a
+          key={match.index}
+          href={linkUrl}
+          className="text-cyan-400 hover:text-cyan-300 underline font-semibold transition-colors"
+        >
+          {linkText}
+        </a>
+      );
+    } else {
+      parts.push(
+        <a
+          key={match.index}
+          href={linkUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-cyan-400 hover:text-cyan-300 underline font-semibold transition-colors"
+        >
+          {linkText}
+        </a>
+      );
+    }
+
+    lastIndex = linkRegex.lastIndex;
+  }
+
+  if (lastIndex < content.length) {
+    parts.push(content.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : content;
 }
