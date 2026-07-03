@@ -2,8 +2,12 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"time"
 )
+
+var ErrChatLimitReached = errors.New("Sohbet kotanız dolmuştur. Yusuf ile iletişime geçmek için lütfen iletişim formunu kullanın.")
+var ErrGlobalLimitReached = errors.New("Şu anda yoğunluk var o yüzden kullanılamıyor")
 
 type Conversation struct {
 	ID        string    `db:"id" json:"id"`
@@ -42,6 +46,8 @@ type ChatRepository interface {
 	DeleteConversation(ctx context.Context, id string, userID string, sessionID string) error
 	CreateMessage(ctx context.Context, msg *Message) error
 	GetMessagesByConversation(ctx context.Context, conversationID string, limit int) ([]Message, error)
+	CountMessagesBySessionOrUser(ctx context.Context, userID string, sessionID string) (int, error)
+	CountAllUserMessages(ctx context.Context) (int, error)
 }
 
 type ChatUseCase interface {
@@ -49,4 +55,5 @@ type ChatUseCase interface {
 	ListConversations(ctx context.Context, userID string, sessionID string) ([]Conversation, error)
 	GetConversationMessages(ctx context.Context, userID string, sessionID string, conversationID string) ([]Message, error)
 	DeleteConversation(ctx context.Context, userID string, sessionID string, conversationID string) error
+	CheckQuota(ctx context.Context, userID string, sessionID string) (globalReached bool, personalReached bool, err error)
 }

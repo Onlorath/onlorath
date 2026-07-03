@@ -151,3 +151,47 @@ func (r *chatRepository) GetMessagesByConversation(ctx context.Context, conversa
 	}
 	return messages, nil
 }
+
+func (r *chatRepository) CountMessagesBySessionOrUser(ctx context.Context, userID string, sessionID string) (int, error) {
+	var count int
+	var query string
+	var err error
+
+	if userID != "" {
+		query = `
+			SELECT COUNT(m.id)
+			FROM messages m
+			JOIN conversations c ON m.conversation_id = c.id
+			WHERE c.user_id = $1 AND m.role = 'user'
+		`
+		err = r.db.GetContext(ctx, &count, query, userID)
+	} else {
+		query = `
+			SELECT COUNT(m.id)
+			FROM messages m
+			JOIN conversations c ON m.conversation_id = c.id
+			WHERE c.session_id = $1 AND c.user_id IS NULL AND m.role = 'user'
+		`
+		err = r.db.GetContext(ctx, &count, query, sessionID)
+	}
+
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (r *chatRepository) CountAllUserMessages(ctx context.Context) (int, error) {
+	var count int
+	query := `
+		SELECT COUNT(m.id)
+		FROM messages m
+		JOIN conversations c ON m.conversation_id = c.id
+		WHERE m.role = 'user'
+	`
+	err := r.db.GetContext(ctx, &count, query)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}

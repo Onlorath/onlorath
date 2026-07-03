@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -24,23 +25,25 @@ func NewChatHandler(chatUseCase domain.ChatUseCase, cfg *config.Config) *ChatHan
 	}
 }
 
-// getAuthInfo extracts optional userID and guest sessionID from request.
-func (h *ChatHandler) getAuthInfo(w http.ResponseWriter, r *http.Request) (string, string, bool) {
+// getAuthInfo extracts optional userID and guest sessionID from request and returns updated context.
+func (h *ChatHandler) getAuthInfo(w http.ResponseWriter, r *http.Request) (context.Context, string, string, bool) {
 	sessionID := r.Header.Get("X-Session-ID")
 	if sessionID == "" {
 		sessionID = r.URL.Query().Get("session_id")
 	}
 
+	ctx := r.Context()
+
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		// Public guest user, no authorization header
-		return "", sessionID, true
+		return ctx, "", sessionID, true
 	}
 
 	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
 		h.respondWithError(w, http.StatusUnauthorized, "Authorization header must be Bearer {token}")
-		return "", "", false
+		return nil, "", "", false
 	}
 
 	tokenStr := parts[1]
@@ -48,13 +51,28 @@ func (h *ChatHandler) getAuthInfo(w http.ResponseWriter, r *http.Request) (strin
 	if err != nil {
 		if err == jwt.ErrExpiredToken {
 			h.respondWithError(w, http.StatusUnauthorized, "Access token has expired")
-			return "", "", false
+			return nil, "", "", false
 		}
 		h.respondWithError(w, http.StatusUnauthorized, "Invalid access token")
-		return "", "", false
+		return nil, "", "", false
 	}
 
-	return claims.UserID, sessionID, true
+	// Inject role into context
+	ctx = context.WithValue(ctx, domain.ContextKeyUserRole, claims.Role)
+
+	return ctx, claims.UserID, sessionID, true
+}
+
+func (h *ChatHandler) setQuotaHeaders(w http.ResponseWriter, ctx context.Context, userID string, sessionID string) {
+	globalReached, personalReached, err := h.chatUseCase.CheckQuota(ctx, userID, sessionID)
+	if err == nil {
+		if globalReached {
+			w.Header().Set("X-Chat-System-Busy", "true")
+		}
+		if personalReached {
+			w.Header().Set("X-Chat-Quota-Exceeded", "true")
+		}
+	}
 }
 
 func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +82,7 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, sessionID, ok := h.getAuthInfo(w, r)
+	ctx, userID, sessionID, ok := h.getAuthInfo(w, r)
 	if !ok {
 		return
 	}
@@ -79,17 +97,26 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.chatUseCase.SendMessage(r.Context(), userID, sessionID, &req)
+	resp, err := h.chatUseCase.SendMessage(ctx, userID, sessionID, &req)
 	if err != nil {
+		if err == domain.ErrGlobalLimitReached {
+			h.respondWithError(w, http.StatusTooManyRequests, err.Error())
+			return
+		}
+		if err == domain.ErrChatLimitReached {
+			h.respondWithError(w, http.StatusTooManyRequests, err.Error())
+			return
+		}
 		h.respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	h.setQuotaHeaders(w, ctx, userID, sessionID)
 	h.respondWithJSON(w, http.StatusOK, resp)
 }
 
 func (h *ChatHandler) ListConversations(w http.ResponseWriter, r *http.Request) {
-	userID, sessionID, ok := h.getAuthInfo(w, r)
+	ctx, userID, sessionID, ok := h.getAuthInfo(w, r)
 	if !ok {
 		return
 	}
@@ -99,7 +126,8 @@ func (h *ChatHandler) ListConversations(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	conversations, err := h.chatUseCase.ListConversations(r.Context(), userID, sessionID)
+	h.setQuotaHeaders(w, ctx, userID, sessionID)
+	conversations, err := h.chatUseCase.ListConversations(ctx, userID, sessionID)
 	if err != nil {
 		h.respondWithError(w, http.StatusInternalServerError, "Internal server error")
 		return
@@ -109,7 +137,7 @@ func (h *ChatHandler) ListConversations(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *ChatHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
-	userID, sessionID, ok := h.getAuthInfo(w, r)
+	ctx, userID, sessionID, ok := h.getAuthInfo(w, r)
 	if !ok {
 		return
 	}
@@ -125,7 +153,8 @@ func (h *ChatHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	messages, err := h.chatUseCase.GetConversationMessages(r.Context(), userID, sessionID, conversationID)
+	h.setQuotaHeaders(w, ctx, userID, sessionID)
+	messages, err := h.chatUseCase.GetConversationMessages(ctx, userID, sessionID, conversationID)
 	if err != nil {
 		if err.Error() == "conversation not found" {
 			h.respondWithError(w, http.StatusNotFound, err.Error())
@@ -139,7 +168,7 @@ func (h *ChatHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ChatHandler) DeleteConversation(w http.ResponseWriter, r *http.Request) {
-	userID, sessionID, ok := h.getAuthInfo(w, r)
+	ctx, userID, sessionID, ok := h.getAuthInfo(w, r)
 	if !ok {
 		return
 	}
@@ -155,7 +184,8 @@ func (h *ChatHandler) DeleteConversation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err := h.chatUseCase.DeleteConversation(r.Context(), userID, sessionID, conversationID)
+	h.setQuotaHeaders(w, ctx, userID, sessionID)
+	err := h.chatUseCase.DeleteConversation(ctx, userID, sessionID, conversationID)
 	if err != nil {
 		if err.Error() == "conversation not found" {
 			h.respondWithError(w, http.StatusNotFound, err.Error())

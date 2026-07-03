@@ -25,6 +25,7 @@ func NewRouter(cfg *config.Config, userHandler *handler.UserHandler, chatHandler
 			w.Header().Set("Access-Control-Allow-Origin", cfg.ClientURL)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, X-CSRF-Token, X-Session-ID")
+			w.Header().Set("Access-Control-Expose-Headers", "X-Chat-System-Busy, X-Chat-Quota-Exceeded")
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 			if r.Method == "OPTIONS" {
