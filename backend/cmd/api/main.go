@@ -56,10 +56,15 @@ func main() {
 	userRepo := postgres.NewUserRepository(db)
 	userUseCase := usecase.NewUserUseCase(userRepo, cfg)
 	userHandler := handler.NewUserHandler(userUseCase, cfg)
+
+	chatRepo := postgres.NewChatRepository(db)
+	chatUseCase := usecase.NewChatUseCase(chatRepo, cfg)
+	chatHandler := handler.NewChatHandler(chatUseCase, cfg)
+
 	authM := middleware.NewAuthMiddleware(cfg)
 
 	// 4. Initialize Router
-	router := httpDelivery.NewRouter(cfg, userHandler, authM)
+	router := httpDelivery.NewRouter(cfg, userHandler, chatHandler, authM)
 
 	// 5. Configure and Start HTTP Server
 	serverAddr := fmt.Sprintf(":%s", cfg.Port)

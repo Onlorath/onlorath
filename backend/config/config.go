@@ -21,6 +21,7 @@ type Config struct {
 	AccessTokenExpiry  time.Duration
 	RefreshTokenExpiry time.Duration
 	ClientURL          string
+	GeminiAPIKey       string
 }
 
 func LoadConfig() (*Config, error) {
@@ -60,6 +61,10 @@ func LoadConfig() (*Config, error) {
 	}
 
 	clientURL := getEnv("CLIENT_URL", "http://localhost:3000")
+	geminiAPIKey := getEnv("GEMINI_API_KEY", "")
+	if geminiAPIKey == "" {
+		log.Println("Warning: GEMINI_API_KEY is not set, chat will not work")
+	}
 
 	return &Config{
 		Port:               port,
@@ -74,6 +79,7 @@ func LoadConfig() (*Config, error) {
 		AccessTokenExpiry:  accessTokenExpiry,
 		RefreshTokenExpiry: refreshTokenExpiry,
 		ClientURL:          clientURL,
+		GeminiAPIKey:       geminiAPIKey,
 	}, nil
 }
 
