@@ -3,7 +3,12 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-export default function Rocket3D() {
+interface Rocket3DProps {
+  introPhase?: 'typing1' | 'typing2' | 'flying' | 'fading' | 'completed';
+  onFlyingComplete?: () => void;
+}
+
+export default function Rocket3D({ introPhase = 'completed', onFlyingComplete }: Rocket3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollProgressRef = useRef(0);
   const isScrollingRef = useRef(false);
@@ -11,10 +16,21 @@ export default function Rocket3D() {
   const lastScrollYRef = useRef(0);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const phaseRef = useRef(introPhase);
+  const onFlyingCompleteRef = useRef(onFlyingComplete);
+
+  useEffect(() => {
+    phaseRef.current = introPhase;
+  }, [introPhase]);
+
+  useEffect(() => {
+    onFlyingCompleteRef.current = onFlyingComplete;
+  }, [onFlyingComplete]);
+
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const width = 180;
+    const width = window.innerWidth;
     const height = window.innerHeight;
 
     // --- 1. Scene, Camera, Renderer Setup ---
@@ -282,9 +298,10 @@ export default function Rocket3D() {
 
     // Handle screen resize
     const handleResize = () => {
+      const newWidth = window.innerWidth;
       const newHeight = window.innerHeight;
-      renderer.setSize(width, newHeight);
-      camera.aspect = width / newHeight;
+      renderer.setSize(newWidth, newHeight);
+      camera.aspect = newWidth / newHeight;
       camera.updateProjectionMatrix();
     };
     window.addEventListener('resize', handleResize);
@@ -295,76 +312,176 @@ export default function Rocket3D() {
     let currentRotationZ = 0;
     let currentFlameScale = 0.2;
 
+    // Flight transition tracking variables
+    let flyStartTime = 0;
+    let startX = 0;
+    let startY = 3.6;
+    let startRotX = 0;
+    let startRotY = 0.5;
+    let startRotZ = 0.2;
+    let hasNotifiedComplete = false;
+
     const animate = () => {
-      // 5.1. Y Position Interpolation (Smooth glide based on dynamic touchdown point)
+      const wWidth = window.innerWidth;
+      const wHeight = window.innerHeight;
+
+      // 5.1. Visible dimensions mapping
       const visibleHeight = 2 * 11.5 * Math.tan((20 * Math.PI) / 180); // ~8.37
-      const moonHeightPx = 120; // height of the moon curve in px
-      const moonHeightWebGL = (moonHeightPx / window.innerHeight) * visibleHeight;
-      const bottomTouchdownY = (-visibleHeight / 2) + moonHeightWebGL + 0.95; // perfect contact offset
-      
-      const targetY = 3.6 - scrollProgressRef.current * (3.6 - bottomTouchdownY);
-      currentY += (targetY - currentY) * 0.1; 
-      rocketGroup.position.y = currentY;
+      const visibleWidth = visibleHeight * (wWidth / wHeight);
 
-      const isLanded = scrollProgressRef.current > 0.97;
+      // Target position on the right of the screen (mimics old w-48 layout)
+      const targetLandingX = ((wWidth / 2) - 90) * visibleHeight / wHeight;
 
-      // 5.2. Rotation/Tilt Interpolation (Dynamic response to scroll velocity)
-      let targetRotX = 0;
-      let targetRotZ = 0.2; // Default tilt towards left profile
+      const activePhase = phaseRef.current;
 
-      if (isLanded) {
-        // Aligns perfectly vertically and stays facing slightly front-side
-        targetRotX = 0;
-        targetRotZ = 0;
-        rocketGroup.rotation.y += (0.5 - rocketGroup.rotation.y) * 0.1;
-      } else {
-        // Idle spin around Y axis
-        rocketGroup.rotation.y += 0.012;
+      if (activePhase === 'typing1' || activePhase === 'typing2') {
+        // Rocket floats in center-right of the screen (shifted further right to avoid text overlap)
+        const time = performance.now() * 0.001;
+        const targetX = 2.4 + Math.cos(time * 1.2) * 0.04;
+        const targetY = Math.sin(time * 1.8) * 0.1;
 
-        if (isScrollingRef.current) {
-          const dir = lastScrollYRef.current - document.documentElement.scrollTop;
-          if (dir < 0) {
-            // Scrolling down -> Tilt nose slightly forward and left
-            targetRotX = 0.35;
-            targetRotZ = 0.3;
-          } else {
-            // Scrolling up -> Tilt nose slightly backward and right
-            targetRotX = -0.15;
-            targetRotZ = 0.12;
-          }
-        }
-      }
+        // Smoothly update positions (immediate follow)
+        rocketGroup.position.x = targetX;
+        rocketGroup.position.y = targetY;
+        rocketGroup.position.z = 0;
 
-      currentRotationX += (targetRotX - currentRotationX) * 0.08;
-      currentRotationZ += (targetRotZ - currentRotationZ) * 0.08;
-      rocketGroup.rotation.x = currentRotationX;
-      rocketGroup.rotation.z = currentRotationZ;
-
-      // 5.3. Flame Scale & Flickering
-      const targetFlameScale = isLanded ? 0 : (isScrollingRef.current ? 1.0 + scrollDeltaRef.current : 0.2);
-      currentFlameScale += (targetFlameScale - currentFlameScale) * 0.15;
-      
-      const flicker = isLanded ? 0 : (1.0 + (Math.random() - 0.5) * 0.15);
-
-      if (isLanded) {
-        // Cut engine flames
-        mainFlame.scale.set(0, 0, 0);
-        mainInnerFlame.scale.set(0, 0, 0);
-        leftFlame.scale.set(0, 0, 0);
-        rightFlame.scale.set(0, 0, 0);
-        pointLight.intensity = 0;
-      } else {
-        // Scale central main flames
-        mainFlame.scale.set(currentFlameScale * flicker, currentFlameScale * flicker * 1.5, currentFlameScale * flicker);
-        mainInnerFlame.scale.set(currentFlameScale * 0.6 * flicker, currentFlameScale * 0.6 * flicker * 1.3, currentFlameScale * 0.6 * flicker);
+        // Slow idle spin on Y axis
+        rocketGroup.rotation.y += 0.015;
         
-        // Scale booster flames
+        // Gentle hover rotations on X/Z
+        currentRotationX += (0.1 - currentRotationX) * 0.05;
+        currentRotationZ += (0.1 - currentRotationZ) * 0.05;
+        rocketGroup.rotation.x = currentRotationX;
+        rocketGroup.rotation.z = currentRotationZ;
+
+        // Idle thrusters
+        const targetFlameScale = 0.35;
+        currentFlameScale += (targetFlameScale - currentFlameScale) * 0.1;
+        const flicker = 1.0 + (Math.random() - 0.5) * 0.12;
+
+        mainFlame.scale.set(currentFlameScale * flicker, currentFlameScale * flicker * 1.3, currentFlameScale * flicker);
+        mainInnerFlame.scale.set(currentFlameScale * 0.6 * flicker, currentFlameScale * 0.6 * flicker * 1.1, currentFlameScale * 0.6 * flicker);
+        leftFlame.scale.set(currentFlameScale * 0.8 * flicker, currentFlameScale * 0.8 * flicker * 1.1, currentFlameScale * 0.8 * flicker);
+        rightFlame.scale.set(currentFlameScale * 0.8 * flicker, currentFlameScale * 0.8 * flicker * 1.1, currentFlameScale * 0.8 * flicker);
+        pointLight.intensity = currentFlameScale * 2.5;
+        pointLight.position.y = targetY - 1.2;
+
+      } else if (activePhase === 'flying') {
+        // --- Flying Transition State ---
+        if (flyStartTime === 0) {
+          flyStartTime = performance.now();
+          startX = rocketGroup.position.x;
+          startY = rocketGroup.position.y;
+          startRotX = rocketGroup.rotation.x;
+          startRotY = rocketGroup.rotation.y;
+          startRotZ = rocketGroup.rotation.z;
+        }
+
+        const elapsed = performance.now() - flyStartTime;
+        const duration = 1500; // 1.5 seconds
+        const t = Math.min(elapsed / duration, 1.0);
+        
+        // Easing: Smoothstep (Cubic ease-in-out)
+        const ease = t * t * (3 - 2 * t);
+
+        // Interpolate coordinates
+        rocketGroup.position.x = THREE.MathUtils.lerp(startX, targetLandingX, ease);
+        rocketGroup.position.y = THREE.MathUtils.lerp(startY, 3.6, ease);
+        rocketGroup.position.z = 0;
+
+        // Interpolate rotations
+        rocketGroup.rotation.x = THREE.MathUtils.lerp(startRotX, 0, ease);
+        rocketGroup.rotation.y = THREE.MathUtils.lerp(startRotY, 0.5, ease);
+        rocketGroup.rotation.z = THREE.MathUtils.lerp(startRotZ, 0.2, ease);
+
+        // Update tracking variables to seamlessly hand over to playing phase
+        currentY = rocketGroup.position.y;
+        currentRotationX = rocketGroup.rotation.x;
+        currentRotationZ = rocketGroup.rotation.z;
+
+        // Boosters full blast during flying!
+        const targetFlameScale = 1.3;
+        currentFlameScale += (targetFlameScale - currentFlameScale) * 0.15;
+        const flicker = 1.0 + (Math.random() - 0.5) * 0.15;
+
+        mainFlame.scale.set(currentFlameScale * flicker, currentFlameScale * flicker * 1.6, currentFlameScale * flicker);
+        mainInnerFlame.scale.set(currentFlameScale * 0.6 * flicker, currentFlameScale * 0.6 * flicker * 1.4, currentFlameScale * 0.6 * flicker);
         leftFlame.scale.set(currentFlameScale * flicker, currentFlameScale * flicker * 1.3, currentFlameScale * flicker);
         rightFlame.scale.set(currentFlameScale * flicker, currentFlameScale * flicker * 1.3, currentFlameScale * flicker);
-
-        // Control point light intensity based on flame
-        pointLight.intensity = currentFlameScale * 3.5;
+        pointLight.intensity = currentFlameScale * 4.0;
         pointLight.position.y = currentY - 1.2;
+
+        if (t === 1.0 && !hasNotifiedComplete) {
+          hasNotifiedComplete = true;
+          if (onFlyingCompleteRef.current) {
+            onFlyingCompleteRef.current();
+          }
+        }
+
+      } else {
+        // --- Playing / Completed State (Normal Scroll Behavior) ---
+        // Smoothly lock onto targetLandingX
+        rocketGroup.position.x = targetLandingX;
+
+        const moonHeightPx = 120; // height of the moon curve in px
+        const moonHeightWebGL = (moonHeightPx / wHeight) * visibleHeight;
+        const bottomTouchdownY = (-visibleHeight / 2) + moonHeightWebGL + 0.95; // perfect contact offset
+        
+        const targetY = 3.6 - scrollProgressRef.current * (3.6 - bottomTouchdownY);
+        currentY += (targetY - currentY) * 0.1; 
+        rocketGroup.position.y = currentY;
+
+        const isLanded = scrollProgressRef.current > 0.97;
+
+        // Rotation/Tilt Interpolation
+        let targetRotX = 0;
+        let targetRotZ = 0.2; // Default tilt towards left profile
+
+        if (isLanded) {
+          targetRotX = 0;
+          targetRotZ = 0;
+          rocketGroup.rotation.y += (0.5 - rocketGroup.rotation.y) * 0.1;
+        } else {
+          // Idle spin around Y axis
+          rocketGroup.rotation.y += 0.012;
+
+          if (isScrollingRef.current) {
+            const dir = lastScrollYRef.current - document.documentElement.scrollTop;
+            if (dir < 0) {
+              targetRotX = 0.35;
+              targetRotZ = 0.3;
+            } else {
+              targetRotX = -0.15;
+              targetRotZ = 0.12;
+            }
+          }
+        }
+
+        currentRotationX += (targetRotX - currentRotationX) * 0.08;
+        currentRotationZ += (targetRotZ - currentRotationZ) * 0.08;
+        rocketGroup.rotation.x = currentRotationX;
+        rocketGroup.rotation.z = currentRotationZ;
+
+        // Flame Scale & Flickering
+        const targetFlameScale = isLanded ? 0 : (isScrollingRef.current ? 1.0 + scrollDeltaRef.current : 0.2);
+        currentFlameScale += (targetFlameScale - currentFlameScale) * 0.15;
+        
+        const flicker = isLanded ? 0 : (1.0 + (Math.random() - 0.5) * 0.15);
+
+        if (isLanded) {
+          mainFlame.scale.set(0, 0, 0);
+          mainInnerFlame.scale.set(0, 0, 0);
+          leftFlame.scale.set(0, 0, 0);
+          rightFlame.scale.set(0, 0, 0);
+          pointLight.intensity = 0;
+        } else {
+          mainFlame.scale.set(currentFlameScale * flicker, currentFlameScale * flicker * 1.5, currentFlameScale * flicker);
+          mainInnerFlame.scale.set(currentFlameScale * 0.6 * flicker, currentFlameScale * 0.6 * flicker * 1.3, currentFlameScale * 0.6 * flicker);
+          leftFlame.scale.set(currentFlameScale * flicker, currentFlameScale * flicker * 1.3, currentFlameScale * flicker);
+          rightFlame.scale.set(currentFlameScale * flicker, currentFlameScale * flicker * 1.3, currentFlameScale * flicker);
+          pointLight.intensity = currentFlameScale * 3.5;
+          pointLight.position.y = currentY - 1.2;
+        }
       }
 
       renderer.render(scene, camera);
@@ -411,7 +528,7 @@ export default function Rocket3D() {
   return (
     <div 
       ref={containerRef} 
-      className="hidden md:block fixed -right-2 top-0 h-screen w-48 z-50 pointer-events-none"
+      className="hidden md:block fixed inset-0 h-screen w-full z-[110] pointer-events-none"
     />
   );
 }

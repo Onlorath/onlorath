@@ -81,7 +81,7 @@ export default function ChatWidget() {
       setMessages(res.data);
       checkHeaders(res.headers);
       const userMsgCount = res.data.filter((m: any) => m.role === 'user').length;
-      setIsQuotaExceeded(userMsgCount >= 5);
+      setIsQuotaExceeded(userMsgCount >= 15);
     } catch (err) {
       console.error('Failed to load messages:', err);
     }
@@ -125,7 +125,7 @@ export default function ChatWidget() {
       setMessages(newMessages);
 
       const userMsgCount = newMessages.filter((m) => m.role === 'user').length;
-      if (userMsgCount >= 5) {
+      if (userMsgCount >= 15) {
         setIsQuotaExceeded(true);
       }
 
@@ -337,7 +337,7 @@ export default function ChatWidget() {
               </div>
             ) : isQuotaExceeded ? (
               <div className="text-[10px] text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2 text-center font-mono">
-                Sohbet kotanız (5 mesaj) dolmuştur. Yusuf'a ulaşmak için lütfen iletişim formunu kullanın.
+                Sohbet kotanız (15 mesaj) dolmuştur. Yusuf'a ulaşmak için lütfen iletişim formunu kullanın.
               </div>
             ) : null}
             <div className="flex items-center space-x-2 w-full">
@@ -345,7 +345,7 @@ export default function ChatWidget() {
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                placeholder={isSystemBusy || isQuotaExceeded ? "Sohbet devre dışı..." : "Gemini'ye sorun..."}
+                placeholder={isSystemBusy || isQuotaExceeded ? "Sohbet devre dışı..." : "Hakkımda ne öğrenmek istiyorsun?"}
                 className="flex-grow p-2 bg-[#0e1424]/60 border border-white/5 hover:border-white/10 focus:border-cyan-500/50 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none transition-all disabled:opacity-55"
                 disabled={isLoading || isSystemBusy || isQuotaExceeded}
               />

@@ -115,16 +115,84 @@ const Starfield = () => {
   return <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none opacity-60 mix-blend-screen" />;
 };
 
+const Typewriter = ({ text, speed = 30 }: { text: string; speed?: number }) => {
+  const [displayedText, setDisplayedText] = useState('');
+  
+  useEffect(() => {
+    setDisplayedText('');
+    let i = 0;
+    const timer = setInterval(() => {
+      if (i < text.length) {
+        setDisplayedText((prev) => prev + text.charAt(i));
+        i++;
+      } else {
+        clearInterval(timer);
+      }
+    }, speed);
+    return () => clearInterval(timer);
+  }, [text, speed]);
 
+  return (
+    <h2 className="font-mono text-lg md:text-xl font-medium tracking-tight text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.4)]">
+      {displayedText}
+      <span className="animate-pulse text-fuchsia-500 ml-1 font-bold">_</span>
+    </h2>
+  );
+};
 
 export default function App() {
+  const [isMounted, setIsMounted] = useState(false);
+  const [isIntroRunning, setIsIntroRunning] = useState(true);
+  const [introPhase, setIntroPhase] = useState<'typing1' | 'typing2' | 'flying' | 'fading' | 'completed'>('typing1');
+
+  useEffect(() => {
+    setIsMounted(true);
+
+    const lastIntroTime = localStorage.getItem('last_intro_time');
+    const now = Date.now();
+
+    if (lastIntroTime && now - parseInt(lastIntroTime, 10) < 600000) {
+      setIsIntroRunning(false);
+      setIntroPhase('completed');
+    } else {
+      localStorage.setItem('last_intro_time', now.toString());
+
+      const timer1 = setTimeout(() => {
+        setIntroPhase('typing2');
+      }, 1500);
+
+      const timer2 = setTimeout(() => {
+        setIntroPhase('flying');
+      }, 3000);
+
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    if (isIntroRunning) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isIntroRunning, isMounted]);
+
   const skills = [
     { category: "Core Systems", icon: <Server className="w-5 h-5 text-cyan-400" />, items: ["Go (Golang) / NestJS", "PostgreSQL / MongoDB", "Linux / Nginx / Redis", "Docker / Kubernetes"] },
     { category: "Interface & State", icon: <Layout className="w-5 h-5 text-fuchsia-400" />, items: ["React / Next.js", "Redux / Redux Toolkit", "Tailwind CSS / TypeScript", "JavaScript (ES6+)"] },
     { category: "AI & Cloud Integration", icon: <Database className="w-5 h-5 text-indigo-400" />, items: ["OpenAI & Gemini APIs", "RAG (Retrieval-Augmented)", "FastAPI / Python", "AWS / Azure / GCP"] }
   ];
 
-
+  if (!isMounted) {
+    return <div className="min-h-screen bg-[#050505]" />;
+  }
 
   return (
     <div className="min-h-screen bg-[#050505] text-slate-300 font-sans selection:bg-cyan-500/30 relative overflow-hidden">
@@ -132,8 +200,53 @@ export default function App() {
       {/* Nebula Efekti */}
       <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#050505] to-[#050505]"></div>
       <Starfield />
-      <Rocket3D />
+      <Rocket3D 
+        introPhase={introPhase} 
+        onFlyingComplete={() => {
+          setIntroPhase('fading');
+          setTimeout(() => {
+            setIntroPhase('completed');
+            setIsIntroRunning(false);
+          }, 1000);
+        }}
+      />
       <ChatWidget />
+
+      {/* Intro Overlay */}
+      {introPhase !== 'completed' && (
+        <div 
+          className={`fixed inset-0 bg-[#050505] flex flex-col items-center justify-center z-[100] transition-opacity duration-1000 ${
+            introPhase === 'fading' ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+        >
+          {/* Background grid pattern */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+          
+          <div className="flex flex-col items-center max-w-lg text-center px-6 relative z-10">
+            <div className="font-mono text-xs text-slate-500 uppercase tracking-widest mb-6 animate-pulse">
+              [ System Initialization ]
+            </div>
+            
+            <div className="h-16 flex items-center justify-center">
+              {introPhase === 'typing1' && (
+                <Typewriter text="Bağlantı kuruluyor..." speed={35} />
+              )}
+              {(introPhase === 'typing2' || introPhase === 'flying' || introPhase === 'fading') && (
+                <Typewriter text="Sistemler çevrimiçi. Yörüngeye giriliyor..." speed={25} />
+              )}
+            </div>
+
+            {/* Decorative loading bar */}
+            <div className="w-48 h-1 bg-white/5 rounded-full overflow-hidden mt-8 relative">
+              <div 
+                className={`h-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 rounded-full transition-all duration-[3000ms] ease-out ${
+                  introPhase !== 'typing1' ? 'w-full' : 'w-1/3'
+                }`}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="relative z-10 flex flex-col min-h-screen">
         <nav className="border-b border-white/5 bg-[#050505]/50 backdrop-blur-md sticky top-0 z-50">
