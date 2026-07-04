@@ -83,7 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateAccessToken(response.data.access_token);
       setUser(response.data.user);
       setIsLoading(false);
-      router.push('/');
+      router.push(response.data.user.role === 'admin' ? '/admin' : '/');
     } catch (err: any) {
       setIsLoading(false);
       throw err.response?.data?.error || 'Login failed';
@@ -107,8 +107,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post('/api/v1/users/logout');
+    } catch (err) {
+      console.error('Logout API call failed:', err);
+    }
     handleLogout();
+    router.push('/');
   };
 
   return (

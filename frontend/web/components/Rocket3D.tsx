@@ -124,7 +124,6 @@ export default function Rocket3D({ introPhase = 'completed', onFlyingComplete }:
     for (let i = 0; i <= 20; i++) {
       const t = i / 20;
       const y = -0.9 + t * 1.8; // Y ranges from -0.9 to 0.9
-      // Bulges outwards in the middle
       const radius = 0.38 + 0.08 * Math.sin(t * Math.PI);
       bodyPoints.push(new THREE.Vector2(radius, y));
     }
@@ -138,7 +137,6 @@ export default function Rocket3D({ introPhase = 'completed', onFlyingComplete }:
     for (let i = 0; i <= 15; i++) {
       const t = i / 15;
       const y = t * noseHeight;
-      // Smooth taper from 0.38 to 0
       const radius = 0.38 * Math.cos(t * Math.PI / 2);
       nosePoints.push(new THREE.Vector2(radius, y));
     }
@@ -160,20 +158,21 @@ export default function Rocket3D({ introPhase = 'completed', onFlyingComplete }:
     ring2.rotation.x = Math.PI / 2;
     rocketGroup.add(ring2);
 
-    // 3.4. Glass Cockpit Window (Stretched sleek space canopy)
-    const windowGeo = new THREE.SphereGeometry(0.14, 32, 32);
+    // 3.4. Glass Cockpit Canopy (Stretched aerodynamic cockpit dome)
+    const windowGeo = new THREE.SphereGeometry(0.22, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
     const windowMesh = new THREE.Mesh(windowGeo, windowGlassMaterial);
-    windowMesh.position.set(0, 0.55, 0.33);
-    windowMesh.scale.set(1.0, 1.4, 0.5); 
+    windowMesh.position.set(0, 0.25, 0.32);
+    windowMesh.scale.set(1.0, 1.8, 0.65); 
+    windowMesh.rotation.set(0.35, 0, 0); // Tilted forward
     rocketGroup.add(windowMesh);
 
-    // 3.5. Side Boosters (Sleek aerodynamic capsules)
+    // 3.5. Side Boosters / Warp Pods (Sleek aerodynamic capsules)
     const boosterGeo = new THREE.CylinderGeometry(0.11, 0.13, 0.9, 32);
     const boosterNoseGeo = new THREE.SphereGeometry(0.11, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
     const boosterEngineGeo = new THREE.CylinderGeometry(0.07, 0.10, 0.15, 32);
 
     const leftBooster = new THREE.Group();
-    leftBooster.position.set(-0.42, -0.3, 0);
+    leftBooster.position.set(-0.45, -0.3, 0.1);
     const leftBoosterMesh = new THREE.Mesh(boosterGeo, bodyMaterial);
     const leftBoosterNose = new THREE.Mesh(boosterNoseGeo, neonFuchsiaMaterial);
     leftBoosterNose.position.y = 0.45;
@@ -183,7 +182,7 @@ export default function Rocket3D({ introPhase = 'completed', onFlyingComplete }:
     rocketGroup.add(leftBooster);
 
     const rightBooster = new THREE.Group();
-    rightBooster.position.set(0.42, -0.3, 0);
+    rightBooster.position.set(0.45, -0.3, 0.1);
     const rightBoosterMesh = new THREE.Mesh(boosterGeo, bodyMaterial);
     const rightBoosterNose = new THREE.Mesh(boosterNoseGeo, neonFuchsiaMaterial);
     rightBoosterNose.position.y = 0.45;
@@ -192,39 +191,63 @@ export default function Rocket3D({ introPhase = 'completed', onFlyingComplete }:
     rightBooster.add(rightBoosterMesh, rightBoosterNose, rightBoosterEngine);
     rocketGroup.add(rightBooster);
 
-    // 3.6. Fins / Wings (Sleek custom-extruded aerodynamic swept-back wings)
-    const finShape = new THREE.Shape();
-    finShape.moveTo(0, 0.32);
-    finShape.quadraticCurveTo(0.15, 0.2, 0.38, -0.1);
-    finShape.lineTo(0.35, -0.2);
-    finShape.quadraticCurveTo(0.15, -0.25, 0, -0.32);
-    finShape.closePath();
+    // 3.6. Swept wings (Sleek delta wings for spaceship styling)
+    const wingShape = new THREE.Shape();
+    wingShape.moveTo(0, 0.5);
+    wingShape.lineTo(1.1, -0.3); // Extends far out and sweeps back
+    wingShape.lineTo(0.95, -0.45);
+    wingShape.lineTo(0, -0.15);
+    wingShape.closePath();
 
-    const extrudeSettings = {
-      depth: 0.02,
+    const wingExtrudeSettings = {
+      depth: 0.015,
       bevelEnabled: true,
-      bevelSegments: 3,
+      bevelSegments: 2,
       steps: 1,
-      bevelSize: 0.015,
-      bevelThickness: 0.015,
+      bevelSize: 0.01,
+      bevelThickness: 0.01,
     };
-    const finGeo = new THREE.ExtrudeGeometry(finShape, extrudeSettings);
-    finGeo.translate(0, 0, -0.01); // Center the thickness around z=0
-    finGeo.rotateY(Math.PI / 2); // Rotate to stick out radially
+    const wingGeo = new THREE.ExtrudeGeometry(wingShape, wingExtrudeSettings);
+    wingGeo.translate(0, 0, -0.007);
+    
+    // Left Wing
+    const leftWing = new THREE.Mesh(wingGeo, bodyMaterial);
+    leftWing.position.set(0.35, -0.3, 0);
+    leftWing.rotation.set(0.12, 0, -0.15); // dihedral angle
+    rocketGroup.add(leftWing);
 
-    for (let i = 0; i < 3; i++) {
-      const angle = (i * 2 * Math.PI) / 3;
-      const finMesh = new THREE.Mesh(finGeo, neonCyanMaterial);
-      
-      finMesh.position.set(
-        Math.cos(angle) * 0.40,
-        -0.7,
-        Math.sin(angle) * 0.40
-      );
-      finMesh.rotation.y = -angle;
-      finMesh.rotation.z = 0.22; 
-      rocketGroup.add(finMesh);
-    }
+    // Right Wing (Mirrored)
+    const rightWing = new THREE.Mesh(wingGeo, bodyMaterial);
+    rightWing.position.set(-0.35, -0.3, 0);
+    rightWing.rotation.set(0.12, Math.PI, -0.15); 
+    rocketGroup.add(rightWing);
+
+    // Vertical Tail Fin
+    const tailShape = new THREE.Shape();
+    tailShape.moveTo(0, 0.4);
+    tailShape.lineTo(0.5, -0.1);
+    tailShape.lineTo(0.42, -0.2);
+    tailShape.lineTo(0, 0.05);
+    tailShape.closePath();
+
+    const tailGeo = new THREE.ExtrudeGeometry(tailShape, wingExtrudeSettings);
+    tailGeo.translate(0, 0, -0.007);
+    
+    const tailMesh = new THREE.Mesh(tailGeo, neonFuchsiaMaterial);
+    tailMesh.position.set(0, -0.3, -0.35);
+    tailMesh.rotation.set(0.2, -Math.PI / 2, 0);
+    rocketGroup.add(tailMesh);
+
+    // Wingtip Thruster Nodes
+    const wingTipGeo = new THREE.SphereGeometry(0.045, 16, 16);
+    
+    const leftWingTip = new THREE.Mesh(wingTipGeo, neonCyanMaterial);
+    leftWingTip.position.set(1.08, -0.12, 0.09);
+    leftWing.add(leftWingTip);
+
+    const rightWingTip = new THREE.Mesh(wingTipGeo, neonCyanMaterial);
+    rightWingTip.position.set(1.08, -0.12, 0.09);
+    rightWing.add(rightWingTip);
 
     // 3.7. Main Engine Bell (Curved, flared space engine nozzle)
     const enginePoints = [];
@@ -505,7 +528,9 @@ export default function Rocket3D({ introPhase = 'completed', onFlyingComplete }:
       boosterGeo.dispose();
       boosterNoseGeo.dispose();
       boosterEngineGeo.dispose();
-      finGeo.dispose();
+      wingGeo.dispose();
+      tailGeo.dispose();
+      wingTipGeo.dispose();
       engineGeo.dispose();
       flameGeo.dispose();
       innerFlameGeo.dispose();

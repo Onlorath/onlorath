@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { GitBranch, Code2, ChevronLeft } from 'lucide-react';
+import { GitBranch, Code2, ChevronLeft, Loader2 } from 'lucide-react';
+import { projectAPI, Project } from '../../lib/api';
 
 // Custom SVG components to replace brand icons from lucide-react
 const Github = ({ className }: { className?: string }) => (
@@ -36,42 +37,85 @@ const Linkedin = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const translations = {
+  tr: {
+    backHome: "Ana Sayfaya Dön",
+    title: "Mimari & Projeler",
+    subtitle: "Tasarladığım, optimize ettiğim ve geliştirdiğim temel mimari katmanları ve altyapı projeleri.",
+    empty: "Henüz eklenmiş bir sistem modülü bulunamadı.",
+    navAbout: "Hakkımda",
+    navSkills: "Yetenekler",
+    navSystems: "Sistemler",
+    navContact: "İletişim",
+    footerText: "Engineered systematically.",
+  },
+  en: {
+    backHome: "Back to Home",
+    title: "Architecture & Projects",
+    subtitle: "Core architectural layers and infrastructure projects I have designed, optimized, and developed.",
+    empty: "No system modules have been added yet.",
+    navAbout: "About",
+    navSkills: "Skills",
+    navSystems: "Systems",
+    navContact: "Contact",
+    footerText: "Engineered systematically.",
+  }
+};
+
 export default function ProjectsPage() {
-  const projects = [
-    {
-      title: "Muzigin.com — AI Music Platform",
-      tech: ["NestJS", "TypeScript", "Gemini API", "k3s", "Param Gateway"],
-      description: "NestJS tabanlı mikroservis mimarisine sahip, Sonauto, Gemini ve AudD API entegrasyonlarıyla otomatik müzik üretimi ve telif doğrulaması yapan, Param ödeme altyapılı ve k3s (Kubernetes) üzerinde koşan yapay zeka müzik platformu.",
-      status: "In Orbit"
-    },
-    {
-      title: "Core API Architecture",
-      tech: ["Go", "PostgreSQL", "Clean Architecture", "JWT"],
-      description: "Hexagonal mimari prensipleriyle sıfırdan yazılmış, ORM kullanılmadan sqlx ile optimize edilmiş ve HttpOnly cookie tabanlı güvenli JWT rotasyonuna sahip kurumsal seviye backend sistemi.",
-      status: "Landed"
-    },
-    {
-      title: "Polyglot AI Microservice",
-      tech: ["Go", "Python", "Docker", "Nginx"],
-      description: "Go tabanlı ana API Gateway üzerinden iç ağda Python tabanlı yapay zeka servisine (FastAPI) bağlanan, konteynerize edilmiş çok dilli (polyglot) mikroservis laboratuvarı.",
-      status: "In Development"
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [lang, setLang] = useState<'tr' | 'en'>('tr');
+
+  useEffect(() => {
+    // Synchronize language state
+    const savedLang = localStorage.getItem('onlorath_lang');
+    if (savedLang === 'en' || savedLang === 'tr') {
+      setLang(savedLang);
     }
-  ];
+  }, []);
+
+  const toggleLanguage = () => {
+    const nextLang = lang === 'tr' ? 'en' : 'tr';
+    setLang(nextLang);
+    localStorage.setItem('onlorath_lang', nextLang);
+  };
+
+  useEffect(() => {
+    projectAPI.list()
+      .then((res) => {
+        setProjects(res.data || []);
+      })
+      .catch((err) => {
+        console.error('Failed to load projects:', err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  const t = translations[lang];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-300 font-sans selection:bg-emerald-500/30">
+    <div className="min-h-screen bg-slate-950 text-slate-300 font-sans selection:bg-cyan-500/30">
       
       {/* Navigation */}
       <nav className="border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/" className="font-mono text-xl font-bold tracking-tighter text-white select-none">
-            <span className="text-emerald-400">~/</span>onlorath<span className="animate-pulse">_</span>
+            <span className="text-cyan-450">~/</span>onlorath<span className="animate-pulse text-fuchsia-500">_</span>
           </Link>
-          <div className="flex space-x-6 text-sm font-medium">
-            <Link href="/#about" className="hover:text-emerald-400 transition-colors">Hakkımda</Link>
-            <Link href="/#skills" className="hover:text-emerald-400 transition-colors">Yetenekler</Link>
-            <Link href="/projects" className="text-emerald-400 transition-colors">Sistemler</Link>
-            <Link href="/#contact" className="hover:text-emerald-400 transition-colors">İletişim</Link>
+          <div className="flex items-center space-x-6 text-sm font-medium">
+            <Link href="/#about" className="hover:text-cyan-400 transition-colors">{t.navAbout}</Link>
+            <Link href="/#skills" className="hover:text-cyan-400 transition-colors">{t.navSkills}</Link>
+            <Link href="/projects" className="text-cyan-400 transition-colors">{t.navSystems}</Link>
+            <Link href="/#contact" className="hover:text-cyan-400 transition-colors">{t.navContact}</Link>
+            <button 
+              onClick={toggleLanguage}
+              className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/30 transition-all font-mono text-xs flex items-center gap-1 select-none"
+            >
+              <span>🌐</span> {lang === 'tr' ? 'EN' : 'TR'}
+            </button>
           </div>
         </div>
       </nav>
@@ -79,64 +123,78 @@ export default function ProjectsPage() {
       <main className="max-w-5xl mx-auto px-6 py-12 md:py-20 relative">
         {/* Background visual accents */}
         <div className="absolute top-1/4 left-1/3 w-96 h-96 bg-cyan-600/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-emerald-600/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-fuchsia-600/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="mb-10 relative z-10">
           <Link 
             href="/" 
-            className="inline-flex items-center gap-1.5 text-xs font-mono text-slate-500 hover:text-emerald-400 transition-colors mb-6 group"
+            className="inline-flex items-center gap-1.5 text-xs font-mono text-slate-500 hover:text-cyan-400 transition-colors mb-6 group"
           >
             <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-            <span>Ana Sayfaya Dön</span>
+            <span>{t.backHome}</span>
           </Link>
 
           <h2 className="text-3xl md:text-4xl font-bold text-white flex items-center tracking-tight mb-4">
-            <GitBranch className="w-8 h-8 mr-3 text-cyan-400" /> Mimari & Projeler
+            <GitBranch className="w-8 h-8 mr-3 text-cyan-400" /> {t.title}
           </h2>
           <p className="text-slate-400 max-w-xl text-sm md:text-base leading-relaxed">
-            Tasarladığım, optimize ettiğim ve geliştirdiğim temel mimari katmanları ve altyapı projeleri.
+            {t.subtitle}
           </p>
         </div>
         
-        <div className="grid md:grid-cols-2 gap-6 relative z-10 mb-20">
-          {projects.map((project, idx) => (
-            <div key={idx} className="group bg-slate-900/30 border border-slate-800/80 rounded-xl p-6 hover:bg-slate-900/60 hover:border-slate-700/80 transition-all duration-300 flex flex-col h-full relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-15 transition-all duration-300 group-hover:scale-110">
-                <Code2 className="w-24 h-24 text-slate-400" />
-              </div>
-              
-              <div className="flex justify-between items-start mb-4 relative z-10">
-                <h3 className="text-xl font-bold text-white tracking-tight">{project.title}</h3>
-                <span className="text-xs font-mono px-2.5 py-1 bg-slate-800 rounded border border-slate-750 text-slate-300">
-                  {project.status}
-                </span>
-              </div>
-              
-              <p className="text-slate-400 text-sm leading-relaxed mb-6 relative z-10 flex-grow">
-                {project.description}
-              </p>
-              
-              <div className="flex flex-wrap gap-2 relative z-10 mt-auto">
-                {project.tech.map((t, i) => (
-                  <span key={i} className="text-xs font-mono text-cyan-400 bg-cyan-400/5 border border-cyan-500/10 px-2.5 py-1 rounded">
-                    {t}
+        {loading ? (
+          <div className="h-64 flex items-center justify-center relative z-10">
+            <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+          </div>
+        ) : projects.length === 0 ? (
+          <div className="h-64 flex items-center justify-center relative z-10 text-slate-500 font-mono text-xs border border-dashed border-slate-900 rounded-2xl bg-slate-950/20">
+            {t.empty}
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-6 relative z-10 mb-20">
+            {projects.map((project) => (
+              <div key={project.id} className="group bg-slate-900/30 border border-slate-800/80 rounded-xl p-6 hover:bg-slate-900/60 hover:border-slate-700/80 transition-all duration-300 flex flex-col h-full relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-15 transition-all duration-300 group-hover:scale-110">
+                  <Code2 className="w-24 h-24 text-slate-400" />
+                </div>
+                
+                <div className="flex justify-between items-start mb-4 relative z-10">
+                  <h3 className="text-xl font-bold text-white tracking-tight">{project.title}</h3>
+                  <span className={`text-xs font-mono px-2.5 py-1 rounded border ${
+                    project.status === 'In Orbit' ? 'text-cyan-400 bg-cyan-500/5 border-cyan-500/10' :
+                    project.status === 'Landed' ? 'text-emerald-400 bg-emerald-500/5 border-emerald-500/10' :
+                    'text-yellow-400 bg-yellow-500/5 border-yellow-500/10'
+                  }`}>
+                    {project.status}
                   </span>
-                ))}
+                </div>
+                
+                <p className="text-slate-400 text-sm leading-relaxed mb-6 relative z-10 flex-grow">
+                  {project.description}
+                </p>
+                
+                <div className="flex flex-wrap gap-2 relative z-10 mt-auto">
+                  {project.tech.map((t, i) => (
+                    <span key={i} className="text-xs font-mono text-cyan-400 bg-cyan-400/5 border border-cyan-500/10 px-2.5 py-1 rounded">
+                      {t}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </main>
 
       {/* Footer */}
       <footer className="border-t border-slate-900/60 py-8 bg-slate-950">
         <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500">
-          <p>© {new Date().getFullYear()} onlorath. Engineered systematically.</p>
+          <p>© {new Date().getFullYear()} onlorath. {t.footerText}</p>
           <div className="flex space-x-6 mt-4 md:mt-0 font-mono text-xs">
-            <a href="https://github.com/onlorath" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+            <a href="https://github.com/onlorath" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors flex items-center gap-1.5">
               <Github className="w-4 h-4"/> GitHub
             </a>
-            <a href="https://www.linkedin.com/in/yusuf-albayrak/" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+            <a href="https://www.linkedin.com/in/yusuf-albayrak/" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors flex items-center gap-1.5">
               <Linkedin className="w-4 h-4"/> LinkedIn
             </a>
           </div>
