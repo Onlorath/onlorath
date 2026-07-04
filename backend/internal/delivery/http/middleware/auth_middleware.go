@@ -57,6 +57,20 @@ func (m *AuthMiddleware) Handler(next http.Handler) http.Handler {
 	})
 }
 
+// AdminOnly returns a middleware that requires the user to have the "admin" role.
+// MUST be used after the Handler middleware (which injects user info into context).
+func (m *AuthMiddleware) AdminOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		role, ok := r.Context().Value(domain.ContextKeyUserRole).(string)
+		if !ok || role != "admin" {
+			m.respondWithError(w, http.StatusForbidden, "Admin access required")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+
 func (m *AuthMiddleware) respondWithError(w http.ResponseWriter, code int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)

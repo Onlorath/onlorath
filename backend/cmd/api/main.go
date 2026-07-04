@@ -57,14 +57,27 @@ func main() {
 	userUseCase := usecase.NewUserUseCase(userRepo, cfg)
 	userHandler := handler.NewUserHandler(userUseCase, cfg)
 
+	// Project DI
+	projectRepo := postgres.NewProjectRepository(db)
+	projectUseCase := usecase.NewProjectUseCase(projectRepo, cfg)
+	projectHandler := handler.NewProjectHandler(projectUseCase, cfg)
+
 	chatRepo := postgres.NewChatRepository(db)
-	chatUseCase := usecase.NewChatUseCase(chatRepo, cfg)
+	chatUseCase := usecase.NewChatUseCase(chatRepo, projectRepo, cfg)
 	chatHandler := handler.NewChatHandler(chatUseCase, cfg)
+
+	// Blog DI
+	blogRepo := postgres.NewBlogRepository(db)
+	blogUseCase := usecase.NewBlogUseCase(blogRepo, cfg)
+	blogHandler := handler.NewBlogHandler(blogUseCase, cfg)
+
+	// Upload DI
+	uploadHandler := handler.NewUploadHandler()
 
 	authM := middleware.NewAuthMiddleware(cfg)
 
 	// 4. Initialize Router
-	router := httpDelivery.NewRouter(cfg, userHandler, chatHandler, authM)
+	router := httpDelivery.NewRouter(cfg, userHandler, chatHandler, blogHandler, projectHandler, uploadHandler, authM)
 
 	// 5. Configure and Start HTTP Server
 	serverAddr := fmt.Sprintf(":%s", cfg.Port)

@@ -128,6 +128,23 @@ func (h *UserHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Logout clears the refresh token cookie.
+func (h *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	cookie := &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		SameSite: http.SameSiteLaxMode,
+	}
+	http.SetCookie(w, cookie)
+
+	h.respondWithJSON(w, http.StatusOK, map[string]string{"status": "logged_out"})
+}
+
+
 
 // Helpers for JSON responses
 func (h *UserHandler) respondWithError(w http.ResponseWriter, code int, message string) {
