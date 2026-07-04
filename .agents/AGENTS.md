@@ -120,4 +120,22 @@ To prevent wasting tokens and keeping conversations concise, agents MUST adhere 
 - **Intro Cooldown Mechanism (`localStorage`)**: Integrated a 10-minute (600,000 ms) cooldown rule in [page.tsx](file:///Users/macos/Desktop/New%20Project/frontend/web/app/page.tsx). If a user revisits the page within 10 minutes of seeing the intro, the timeline is skipped and page content loads instantly.
 - **Twinkling Starfield (`Starfield` in [page.tsx](file:///Users/macos/Desktop/New%20Project/frontend/web/app/page.tsx))**: Modified the custom Canvas starfield component. Replaced spatial drifting velocity (`vx`/`vy`) with static coordinate mapping, implementing a smooth trigonometric wave phase animation to mimic realistic star twinkling.
 
+### 📅 Session: 2026-07-04
+
+#### 📐 Terminal Layout Repositioning & Text Centering
+- **Centered Hero:** Centered the Hero (about) title, description, and CTA buttons on the page.
+- **Dedicated Terminal Section:** Moved the `TerminalWidget` below the Hero section to a centered, full-width `max-w-4xl` box with a maximum height of `480px` for better readability.
+
+#### 🚀 Procedural Space Fighter Design & Performance
+- **Optimized Geometry:** Refactored the procedural `Rocket3D` mesh to resemble a sleek space interceptor fighter with wings (`ExtrudeGeometry`), vertical stabilizer tail fin, wingtip energy spheres, and a cyan cockpit glass canopy.
+- **Scroll Restoration Fix:** Disabled browser scroll restoration and autoFocus on the terminal input to prevent jump-scrolling on load, locking the window position to top on mount.
+
+#### 🌐 Bilingual i18n Dil Paketi Entegrasyonu
+- ** Biliingual Support (TR/EN):** Added localized translations to both `page.tsx` and `projects/page.tsx` via local storage synchronization.
+- **Terminal Translation:** Upgraded `TerminalWidget` to translate greeting text, placeholders, help guides, and command results dynamically according to selected language.
+
+#### 🧹 Git Branch Cleanup
+- **Resolved Remote Conflicts:** Synced branches with `git fetch` and pushed backend commits. Deleted the unused 33MB `spaceship.glb` file from the repo.
+
+
 
