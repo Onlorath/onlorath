@@ -85,6 +85,11 @@ api.interceptors.response.use(
 
     // 401 means expired or missing Access Token
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Do not attempt to refresh token if the original request was login or register
+      if (originalRequest.url === '/api/v1/users/login' || originalRequest.url === '/api/v1/users/register') {
+        return Promise.reject(error);
+      }
+
       // Prevent infinite loops if the refresh request itself fails with 401
       if (originalRequest.url === '/api/v1/users/refresh') {
         if (_onLogout) _onLogout();
