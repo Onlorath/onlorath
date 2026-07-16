@@ -71,7 +71,8 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 // DELETE /api/v1/admin/uploads/{filename}
 func (h *UploadHandler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	filename := chi.URLParam(r, "filename")
-	if filename == "" || strings.Contains(filename, "..") {
+	cleanName := filepath.Base(filename)
+	if cleanName == "." || cleanName == "/" || cleanName != filename {
 		h.respondWithError(w, http.StatusBadRequest, "Invalid filename")
 		return
 	}

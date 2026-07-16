@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -74,5 +75,6 @@ func (m *AuthMiddleware) AdminOnly(next http.Handler) http.Handler {
 func (m *AuthMiddleware) respondWithError(w http.ResponseWriter, code int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	_, _ = w.Write([]byte(`{"error":"` + message + `"}`))
+	response, _ := json.Marshal(map[string]string{"error": message})
+	_, _ = w.Write(response)
 }
