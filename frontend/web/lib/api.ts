@@ -74,6 +74,17 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+export class AppError extends Error {
+  status: number;
+  data: any;
+  constructor(message: string, status: number = 500, data: any = null) {
+    super(message);
+    this.name = 'AppError';
+    this.status = status;
+    this.data = data;
+  }
+}
+
 // Response Interceptor: handle 401 Unauthorized errors and trigger silent token refresh
 api.interceptors.response.use(
   (response) => response,
@@ -83,17 +94,20 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    const status = error.response?.status || 500;
+    const message = (error.response?.data as any)?.error || error.message || 'An unexpected error occurred';
+
     // 401 means expired or missing Access Token
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (status === 401 && !originalRequest._retry) {
       // Do not attempt to refresh token if the original request was login or register
       if (originalRequest.url === '/api/v1/users/login' || originalRequest.url === '/api/v1/users/register') {
-        return Promise.reject(error);
+        return Promise.reject(new AppError(message, status, error.response?.data));
       }
 
       // Prevent infinite loops if the refresh request itself fails with 401
       if (originalRequest.url === '/api/v1/users/refresh') {
         if (_onLogout) _onLogout();
-        return Promise.reject(error);
+        return Promise.reject(new AppError('Session expired. Please log in again.', 401));
       }
 
       // If already fetching a new token, queue other failed requests
@@ -135,7 +149,7 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         }
         return api(originalRequest);
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         processQueue(refreshError, null);
         isRefreshing = false;
         
@@ -143,11 +157,11 @@ api.interceptors.response.use(
         if (_onLogout) {
           _onLogout();
         }
-        return Promise.reject(refreshError);
+        return Promise.reject(new AppError('Session expired. Please log in again.', 401));
       }
     }
 
-    return Promise.reject(error);
+    return Promise.reject(new AppError(message, status, error.response?.data));
   }
 );
 

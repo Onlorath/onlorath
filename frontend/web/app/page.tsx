@@ -5,6 +5,8 @@ import { Database, Server, Layout, ChevronRight, FileText, Menu, X, Radio, Activ
 import TerminalWidget from '../components/TerminalWidget';
 import Rocket3D from '../components/Rocket3D';
 import Link from 'next/link';
+import Image from 'next/image';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { blogAPI, projectAPI, Blog, Project } from '../lib/api';
 
 // Custom SVG components to replace brand icons
@@ -88,7 +90,7 @@ const Starfield = () => {
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const time = performance.now() * 0.001;
-      
+
       stars.forEach(star => {
         const alpha = star.minAlpha + (star.maxAlpha - star.minAlpha) * (Math.sin(time * star.speed + star.phase) + 1) * 0.5;
         ctx.beginPath();
@@ -113,7 +115,7 @@ const Starfield = () => {
 
 const Typewriter = ({ text, speed = 30 }: { text: string; speed?: number }) => {
   const [displayedText, setDisplayedText] = useState('');
-  
+
   useEffect(() => {
     setDisplayedText('');
     let i = 0;
@@ -319,27 +321,30 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-slate-300 font-sans selection:bg-cyan-500/30 relative overflow-hidden">
-      
+
       {/* Nebula Efekti */}
       <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#050505] to-[#050505]"></div>
-      <Starfield />
-      <Rocket3D 
-        introPhase={introPhase} 
-        onFlyingComplete={() => {
-          setIntroPhase('fading');
-          setTimeout(() => {
-            setIntroPhase('completed');
-            setIsIntroRunning(false);
-          }, 1000);
-        }}
-      />
+      <ErrorBoundary fallback={<div className="fixed inset-0 z-0 pointer-events-none opacity-60 mix-blend-screen" />}>
+        <Starfield />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <Rocket3D
+          introPhase={introPhase}
+          onFlyingComplete={() => {
+            setIntroPhase('fading');
+            setTimeout(() => {
+              setIntroPhase('completed');
+              setIsIntroRunning(false);
+            }, 1000);
+          }}
+        />
+      </ErrorBoundary>
 
       {/* Intro Overlay */}
       {introPhase !== 'completed' && (
-        <div 
-          className={`fixed inset-0 bg-[#050505] flex flex-col items-center justify-center z-[100] transition-opacity duration-1000 ${
-            introPhase === 'fading' ? 'opacity-0 pointer-events-none' : 'opacity-100'
-          }`}
+        <div
+          className={`fixed inset-0 bg-[#050505] flex flex-col items-center justify-center z-[100] transition-opacity duration-1000 ${introPhase === 'fading' ? 'opacity-0 pointer-events-none' : 'opacity-100'
+            }`}
         >
           {/* Background grid pattern */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
@@ -357,10 +362,9 @@ export default function App() {
 
             {/* Decorative loading bar */}
             <div className="w-48 h-1 bg-white/5 rounded-full overflow-hidden mt-8 relative mx-auto">
-              <div 
-                className={`h-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 rounded-full transition-all duration-[3000ms] ease-out ${
-                  introPhase !== 'typing1' ? 'w-full' : 'w-1/3'
-                }`}
+              <div
+                className={`h-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 rounded-full transition-all duration-[3000ms] ease-out ${introPhase !== 'typing1' ? 'w-full' : 'w-1/3'
+                  }`}
               />
             </div>
           </div>
@@ -381,7 +385,7 @@ export default function App() {
               <a href="#blog" className="hover:text-cyan-400 transition-colors">{t.logs}</a>
               <Link href="/projects" className="hover:text-cyan-400 transition-colors">{t.systems}</Link>
               <a href="#contact" className="hover:text-cyan-400 transition-colors">{t.contact}</a>
-              <button 
+              <button
                 onClick={toggleLanguage}
                 className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/30 transition-all font-mono text-xs flex items-center gap-1 select-none"
               >
@@ -439,7 +443,7 @@ export default function App() {
               </a>
               <div className="pt-2 border-t border-white/5 flex justify-between items-center">
                 <span className="text-xs text-slate-500 font-mono">LANGUAGE / DİL</span>
-                <button 
+                <button
                   onClick={toggleLanguage}
                   className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-slate-350 hover:text-cyan-400 font-mono text-xs"
                 >
@@ -451,11 +455,11 @@ export default function App() {
         </nav>
 
         <main className="max-w-5xl mx-auto px-6 py-24 md:py-32 flex-grow w-full">
-          
+
           <section id="about" className="mb-24 scroll-mt-24">
             <div className="max-w-3xl mx-auto flex flex-col items-center text-center justify-center">
               <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight drop-shadow-[0_0_15px_rgba(34,211,238,0.2)] animate-fade-in-up">
-                {t.titlePart1} <br className="hidden md:block"/>
+                {t.titlePart1} <br className="hidden md:block" />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-400 to-fuchsia-500">
                   {t.titlePart2}
                 </span>
@@ -467,10 +471,10 @@ export default function App() {
                 <a href="#projects" className="px-5 py-3 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all font-medium flex items-center text-sm">
                   {t.viewSystems} <ChevronRight className="w-4 h-4 ml-1.5" />
                 </a>
-                <a 
-                  href="/CV.pdf" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
+                <a
+                  href="/CV.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="px-5 py-3 rounded-lg bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 hover:bg-fuchsia-500/20 transition-all font-medium flex items-center text-sm"
                 >
                   {t.viewCV} <FileText className="w-4 h-4 ml-1.5" />
@@ -484,14 +488,6 @@ export default function App() {
 
           {/* Interactive Terminal Console Section */}
           <section className="mb-48 max-w-4xl mx-auto w-full relative z-10 scroll-mt-24">
-            <div className="text-center mb-6">
-              <span className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-mono text-[10px] uppercase tracking-wider">
-                {t.shellTitle}
-              </span>
-              <p className="text-slate-400 text-xs mt-2.5 font-mono">
-                {t.shellSubtitle}
-              </p>
-            </div>
             <TerminalWidget lang={lang} />
           </section>
 
@@ -499,7 +495,7 @@ export default function App() {
             <h2 className="text-2xl font-bold text-white mb-8 flex items-center drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">
               <Activity className="w-6 h-6 mr-3 text-cyan-400" /> {t.telemetryTitle}
             </h2>
-            
+
             <div className="grid md:grid-cols-3 gap-6">
               {skills.map((skillGroup, idx) => (
                 <div key={idx} className="bg-slate-950/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md hover:border-cyan-500/30 transition-all duration-300 relative group overflow-hidden">
@@ -537,10 +533,13 @@ export default function App() {
                   >
                     {blog.cover_image ? (
                       <div className="h-40 w-full overflow-hidden relative">
-                        <img
+                        <Image
                           src={blog.cover_image}
                           alt={blog.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                          unoptimized={true}
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       </div>
                     ) : (
@@ -598,19 +597,17 @@ export default function App() {
                         <h3 className="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors leading-snug">
                           {project.title}
                         </h3>
-                        <span className={`shrink-0 flex items-center gap-1.5 text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${
-                          project.status === 'In Orbit' ? 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' :
-                          project.status === 'Landed' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
-                          'text-yellow-400 bg-yellow-500/10 border-yellow-500/20 animate-pulse'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${
-                            project.status === 'In Orbit' ? 'bg-cyan-400 animate-ping' :
-                            project.status === 'Landed' ? 'bg-emerald-400' :
-                            'bg-yellow-400'
-                          }`}></span>
+                        <span className={`shrink-0 flex items-center gap-1.5 text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${project.status === 'In Orbit' ? 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' :
+                            project.status === 'Landed' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
+                              'text-yellow-400 bg-yellow-500/10 border-yellow-500/20 animate-pulse'
+                          }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${project.status === 'In Orbit' ? 'bg-cyan-400 animate-ping' :
+                              project.status === 'Landed' ? 'bg-emerald-400' :
+                                'bg-yellow-400'
+                            }`}></span>
                           {project.status === 'In Orbit' ? (lang === 'en' ? 'In Orbit' : 'Yörüngede') :
-                           project.status === 'Landed' ? (lang === 'en' ? 'Landed' : 'İniş Yaptı') :
-                           (lang === 'en' ? 'In Development' : 'Geliştiriliyor')}
+                            project.status === 'Landed' ? (lang === 'en' ? 'Landed' : 'İniş Yaptı') :
+                              (lang === 'en' ? 'In Development' : 'Geliştiriliyor')}
                         </span>
                       </div>
 
@@ -710,8 +707,8 @@ export default function App() {
           <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row justify-between items-end text-sm text-slate-500 relative z-10 h-full">
             <p className="font-mono">© {new Date().getFullYear()} onlorath. // {t.touchdown}</p>
             <div className="flex space-x-4 mt-4 md:mt-0">
-              <a href="https://github.com/onlorath" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors flex items-center"><Github className="w-4 h-4 mr-1"/> GitHub</a>
-              <a href="https://linkedin.com/in/yusuf-albayrak" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors flex items-center"><Linkedin className="w-4 h-4 mr-1"/> LinkedIn</a>
+              <a href="https://github.com/onlorath" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors flex items-center"><Github className="w-4 h-4 mr-1" /> GitHub</a>
+              <a href="https://linkedin.com/in/yusuf-albayrak" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors flex items-center"><Linkedin className="w-4 h-4 mr-1" /> LinkedIn</a>
             </div>
           </div>
         </footer>
