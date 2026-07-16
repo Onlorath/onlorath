@@ -69,6 +69,7 @@ func NewRouter(
 
 		// Public Chat routes (internal optional authentication verification)
 		r.Route("/chat", func(r chi.Router) {
+			r.Use(authM.OptionalHandler)
 			r.Post("/send", chatHandler.SendMessage)
 			r.Get("/conversations", chatHandler.ListConversations)
 			r.Get("/conversations/{id}", chatHandler.GetMessages)

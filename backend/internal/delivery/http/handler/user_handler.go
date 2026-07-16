@@ -2,11 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
 	"backend/config"
 	"backend/internal/domain"
+	"backend/internal/pkg/httputil"
 )
 
 type UserHandler struct {
@@ -26,46 +28,48 @@ func NewUserHandler(userUseCase domain.UserUseCase, cfg *config.Config) *UserHan
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req domain.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		httputil.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
 	user, err := h.userUseCase.Register(r.Context(), &req)
 	if err != nil {
-		if err.Error() == "email is required" || err.Error() == "invalid email format" || err.Error() == "password must be at least 6 characters" {
-			h.respondWithError(w, http.StatusBadRequest, err.Error())
+		var valErr *domain.ValidationError
+		if errors.As(err, &valErr) {
+			httputil.RespondWithError(w, http.StatusBadRequest, valErr.Error())
 			return
 		}
 		if err == domain.ErrEmailAlreadyExists {
-			h.respondWithError(w, http.StatusConflict, err.Error())
+			httputil.RespondWithError(w, http.StatusConflict, err.Error())
 			return
 		}
-		h.respondWithError(w, http.StatusInternalServerError, "Internal server error")
+		httputil.RespondWithError(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 
-	h.respondWithJSON(w, http.StatusCreated, user)
+	httputil.RespondWithJSON(w, http.StatusCreated, user)
 }
 
 // Login handles user login and authentication.
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req domain.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		httputil.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
 	accessToken, refreshToken, user, err := h.userUseCase.Login(r.Context(), &req)
 	if err != nil {
-		if err.Error() == "email is required" || err.Error() == "password is required" {
-			h.respondWithError(w, http.StatusBadRequest, err.Error())
+		var valErr *domain.ValidationError
+		if errors.As(err, &valErr) {
+			httputil.RespondWithError(w, http.StatusBadRequest, valErr.Error())
 			return
 		}
 		if err == domain.ErrInvalidCredentials {
-			h.respondWithError(w, http.StatusUnauthorized, err.Error())
+			httputil.RespondWithError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
-		h.respondWithError(w, http.StatusInternalServerError, "Internal server error")
+		httputil.RespondWithError(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 
@@ -82,7 +86,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, cookie)
 
 	// Return Access Token in response body
-	h.respondWithJSON(w, http.StatusOK, domain.AuthResponse{
+	httputil.RespondWithJSON(w, http.StatusOK, domain.AuthResponse{
 		AccessToken: accessToken,
 		TokenType:   "Bearer",
 		User:        user,
@@ -94,7 +98,7 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 	// User ID can be retrieved from request context (set by AuthMiddleware)
 	userID, ok := r.Context().Value(domain.ContextKeyUserID).(string)
 	if !ok {
-		h.respondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		httputil.RespondWithError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
@@ -106,24 +110,24 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 		"email": email,
 		"role":  role,
 	}
-	h.respondWithJSON(w, http.StatusOK, response)
+	httputil.RespondWithJSON(w, http.StatusOK, response)
 }
 
 // Refresh handles renewing the access token using the refresh token cookie.
 func (h *UserHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("refresh_token")
 	if err != nil {
-		h.respondWithError(w, http.StatusUnauthorized, "Refresh token is missing")
+		httputil.RespondWithError(w, http.StatusUnauthorized, "Refresh token is missing")
 		return
 	}
 
 	accessToken, err := h.userUseCase.Refresh(r.Context(), cookie.Value)
 	if err != nil {
-		h.respondWithError(w, http.StatusUnauthorized, "Invalid or expired refresh token")
+		httputil.RespondWithError(w, http.StatusUnauthorized, "Invalid or expired refresh token")
 		return
 	}
 
-	h.respondWithJSON(w, http.StatusOK, map[string]string{
+	httputil.RespondWithJSON(w, http.StatusOK, map[string]string{
 		"access_token": accessToken,
 	})
 }
@@ -141,24 +145,6 @@ func (h *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, cookie)
 
-	h.respondWithJSON(w, http.StatusOK, map[string]string{"status": "logged_out"})
+	httputil.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "logged_out"})
 }
 
-
-
-// Helpers for JSON responses
-func (h *UserHandler) respondWithError(w http.ResponseWriter, code int, message string) {
-	h.respondWithJSON(w, code, map[string]string{"error": message})
-}
-
-func (h *UserHandler) respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, err := json.Marshal(payload)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(`{"error":"Failed to marshal response"}`))
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	_, _ = w.Write(response)
-}

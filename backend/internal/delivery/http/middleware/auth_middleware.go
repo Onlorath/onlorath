@@ -58,6 +58,39 @@ func (m *AuthMiddleware) Handler(next http.Handler) http.Handler {
 	})
 }
 
+// OptionalHandler returns a middleware that validates the JWT access token if present.
+// If valid, it injects user info into context. If not present or invalid, it proceeds without failing.
+func (m *AuthMiddleware) OptionalHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		tokenStr := parts[1]
+		claims, err := jwt.ValidateAccessToken(tokenStr, []byte(m.cfg.JWTSecret))
+		if err != nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Inject user info into context
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, domain.ContextKeyUserID, claims.UserID)
+		ctx = context.WithValue(ctx, domain.ContextKeyUserEmail, claims.Email)
+		ctx = context.WithValue(ctx, domain.ContextKeyUserRole, claims.Role)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 // AdminOnly returns a middleware that requires the user to have the "admin" role.
 // MUST be used after the Handler middleware (which injects user info into context).
 func (m *AuthMiddleware) AdminOnly(next http.Handler) http.Handler {

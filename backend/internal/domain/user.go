@@ -36,16 +36,25 @@ type RegisterRequest struct {
 	Password string `json:"password"`
 }
 
+type ValidationError struct {
+	Field   string
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}
+
 func (r *RegisterRequest) Validate() error {
 	if r.Email == "" {
-		return errors.New("email is required")
+		return &ValidationError{Field: "email", Message: "email is required"}
 	}
 	emailRegex := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
 	if !emailRegex.MatchString(r.Email) {
-		return errors.New("invalid email format")
+		return &ValidationError{Field: "email", Message: "invalid email format"}
 	}
 	if len(r.Password) < 6 {
-		return errors.New("password must be at least 6 characters")
+		return &ValidationError{Field: "password", Message: "password must be at least 6 characters"}
 	}
 	return nil
 }
@@ -57,10 +66,10 @@ type LoginRequest struct {
 
 func (r *LoginRequest) Validate() error {
 	if r.Email == "" {
-		return errors.New("email is required")
+		return &ValidationError{Field: "email", Message: "email is required"}
 	}
 	if r.Password == "" {
-		return errors.New("password is required")
+		return &ValidationError{Field: "password", Message: "password is required"}
 	}
 	return nil
 }

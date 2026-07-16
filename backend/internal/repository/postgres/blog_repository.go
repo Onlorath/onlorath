@@ -3,8 +3,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"strings"
 
 	"backend/internal/domain"
 
@@ -88,43 +86,16 @@ func (r *blogRepository) List(ctx context.Context, publishedOnly bool) ([]domain
 }
 
 func (r *blogRepository) Update(ctx context.Context, blog *domain.Blog) error {
-	// Build dynamic update query
-	var parts []string
-	var args []interface{}
-	argID := 1
+	query := `
+		UPDATE blogs 
+		SET title = $1, slug = $2, content = $3, cover_image = $4, published = $5
+		WHERE id = $6
+		RETURNING updated_at
+	`
+	// Note: updated_at is automatically managed by the DB trigger update_modified_column()
+	err := r.db.QueryRowxContext(ctx, query, blog.Title, blog.Slug, blog.Content, blog.CoverImage, blog.Published, blog.ID).
+		Scan(&blog.UpdatedAt)
 
-	if blog.Title != "" {
-		parts = append(parts, fmt.Sprintf("title = $%d", argID))
-		args = append(args, blog.Title)
-		argID++
-	}
-	if blog.Slug != "" {
-		parts = append(parts, fmt.Sprintf("slug = $%d", argID))
-		args = append(args, blog.Slug)
-		argID++
-	}
-	if blog.Content != "" {
-		parts = append(parts, fmt.Sprintf("content = $%d", argID))
-		args = append(args, blog.Content)
-		argID++
-	}
-	// Always allow updating cover_image even if empty (to remove cover image)
-	parts = append(parts, fmt.Sprintf("cover_image = $%d", argID))
-	args = append(args, blog.CoverImage)
-	argID++
-
-	parts = append(parts, fmt.Sprintf("published = $%d", argID))
-	args = append(args, blog.Published)
-	argID++
-
-	if len(parts) == 0 {
-		return nil
-	}
-
-	query := "UPDATE blogs SET " + strings.Join(parts, ", ") + fmt.Sprintf(" WHERE id = $%d RETURNING updated_at", argID)
-	args = append(args, blog.ID)
-
-	err := r.db.QueryRowxContext(ctx, query, args...).Scan(&blog.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return domain.ErrBlogNotFound

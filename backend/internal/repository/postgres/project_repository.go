@@ -3,8 +3,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"strings"
 
 	"backend/internal/domain"
 
@@ -57,48 +55,16 @@ func (r *projectRepository) List(ctx context.Context) ([]domain.Project, error) 
 }
 
 func (r *projectRepository) Update(ctx context.Context, project *domain.Project) error {
-	var parts []string
-	var args []interface{}
-	argID := 1
+	query := `
+		UPDATE projects 
+		SET title = $1, description = $2, tech = $3, status = $4, cover_image = $5, sort_order = $6
+		WHERE id = $7
+		RETURNING updated_at
+	`
+	// Note: updated_at is automatically managed by the DB trigger update_modified_column()
+	err := r.db.QueryRowxContext(ctx, query, project.Title, project.Description, pq.Array(project.Tech), project.Status, project.CoverImage, project.SortOrder, project.ID).
+		Scan(&project.UpdatedAt)
 
-	if project.Title != "" {
-		parts = append(parts, fmt.Sprintf("title = $%d", argID))
-		args = append(args, project.Title)
-		argID++
-	}
-	if project.Description != "" {
-		parts = append(parts, fmt.Sprintf("description = $%d", argID))
-		args = append(args, project.Description)
-		argID++
-	}
-	
-	// Tech array is updated if it contains values
-	parts = append(parts, fmt.Sprintf("tech = $%d", argID))
-	args = append(args, pq.Array(project.Tech))
-	argID++
-
-	if project.Status != "" {
-		parts = append(parts, fmt.Sprintf("status = $%d", argID))
-		args = append(args, project.Status)
-		argID++
-	}
-
-	parts = append(parts, fmt.Sprintf("cover_image = $%d", argID))
-	args = append(args, project.CoverImage)
-	argID++
-
-	parts = append(parts, fmt.Sprintf("sort_order = $%d", argID))
-	args = append(args, project.SortOrder)
-	argID++
-
-	if len(parts) == 0 {
-		return nil
-	}
-
-	query := "UPDATE projects SET " + strings.Join(parts, ", ") + fmt.Sprintf(" WHERE id = $%d RETURNING updated_at", argID)
-	args = append(args, project.ID)
-
-	err := r.db.QueryRowxContext(ctx, query, args...).Scan(&project.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return domain.ErrProjectNotFound

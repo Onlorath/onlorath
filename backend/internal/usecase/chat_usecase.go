@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
+	"time"
 
 	"backend/config"
 	"backend/internal/domain"
@@ -19,6 +21,10 @@ type chatUseCase struct {
 	projectRepo domain.ProjectRepository
 	cfg         *config.Config
 	genaiClient *genai.Client
+
+	projectsCache    string
+	projectsCacheSet time.Time
+	cacheMu          sync.RWMutex
 }
 
 func NewChatUseCase(chatRepo domain.ChatRepository, projectRepo domain.ProjectRepository, cfg *config.Config) domain.ChatUseCase {
@@ -142,17 +148,32 @@ func (u *chatUseCase) SendMessage(ctx context.Context, userID string, sessionID 
 	}
 
 	// Load active projects dynamically from DB to feed into system instructions context
-	var projectsList []string
-	projects, pErr := u.projectRepo.List(ctx)
-	if pErr == nil {
-		for _, p := range projects {
-			techStr := strings.Join(p.Tech, ", ")
-			projectsList = append(projectsList, fmt.Sprintf("- **%s** (%s): %s [Durum: %s]", p.Title, techStr, p.Description, p.Status))
+	u.cacheMu.RLock()
+	cacheValid := time.Since(u.projectsCacheSet) < 15*time.Minute && u.projectsCache != ""
+	cachedCtx := u.projectsCache
+	u.cacheMu.RUnlock()
+
+	var projectsContext string
+	if cacheValid {
+		projectsContext = cachedCtx
+	} else {
+		var projectsList []string
+		projects, pErr := u.projectRepo.List(ctx)
+		if pErr == nil {
+			for _, p := range projects {
+				techStr := strings.Join(p.Tech, ", ")
+				projectsList = append(projectsList, fmt.Sprintf("- **%s** (%s): %s [Durum: %s]", p.Title, techStr, p.Description, p.Status))
+			}
 		}
-	}
-	projectsContext := "Henüz sistemde aktif bir proje kaydı bulunmamaktadır."
-	if len(projectsList) > 0 {
-		projectsContext = strings.Join(projectsList, "\n")
+		projectsContext = "Henüz sistemde aktif bir proje kaydı bulunmamaktadır."
+		if len(projectsList) > 0 {
+			projectsContext = strings.Join(projectsList, "\n")
+		}
+
+		u.cacheMu.Lock()
+		u.projectsCache = projectsContext
+		u.projectsCacheSet = time.Now()
+		u.cacheMu.Unlock()
 	}
 
 	// 4. Send Message to Gemini
@@ -163,8 +184,8 @@ YUSUF ALBAYRAK - Full Stack Developer (Istanbul, Turkey)
 Email: ysfalbayrak02@gmail.com | GitHub: github.com/onlorath | LinkedIn: linkedin.com/in/yusuf-albayrak
 Summary: Full Stack Developer with 2.5+ years of professional experience building production-grade web applications using GoLang, TypeScript, NestJS, and React.
 Skills: GoLang, TypeScript, JavaScript, NestJS, Fastify, React, Node.js, Redux, PostgreSQL, MongoDB, Redis, TypeORM, Docker, Kubernetes (k3s), AWS, Azure, GCP, OpenAI/Gemini APIs, RAG.
-Experience: Full Stack Developer at Kartelam (May 2023 - Dec 2025). Developed ReactJS and GoLang microservices.
-Education: Istanbul Aydin University, Associate Degree in Computer Programming (Sep 2022 - Jul 2025).
+Experience: Full Stack Developer at Kartelam (May 2023 - Dec 2025). Developed ReactJS and GoLang microservices. Successfully completed the muzigin.com project.
+Education: Graduated from Istanbul Aydin University, Associate Degree in Computer Programming (Sep 2022 - Jul 2025).
 
 Here are Yusuf's active systems/projects dynamically loaded from the database:
 %s

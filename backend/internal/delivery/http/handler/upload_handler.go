@@ -1,13 +1,14 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"backend/internal/pkg/httputil"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -29,20 +30,20 @@ var allowedExtensions = map[string]bool{
 func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "File too large (max 5MB)")
+		httputil.RespondWithError(w, http.StatusBadRequest, "File too large (max 5MB)")
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "File is required")
+		httputil.RespondWithError(w, http.StatusBadRequest, "File is required")
 		return
 	}
 	defer file.Close()
 
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	if !allowedExtensions[ext] {
-		h.respondWithError(w, http.StatusBadRequest, "Only .jpg, .jpeg, .png, .webp files are allowed")
+		httputil.RespondWithError(w, http.StatusBadRequest, "Only .jpg, .jpeg, .png, .webp files are allowed")
 		return
 	}
 
@@ -53,18 +54,18 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	destPath := filepath.Join(uploadDir, filename)
 	dst, err := os.Create(destPath)
 	if err != nil {
-		h.respondWithError(w, http.StatusInternalServerError, "Failed to save file")
+		httputil.RespondWithError(w, http.StatusInternalServerError, "Failed to save file")
 		return
 	}
 	defer dst.Close()
 
 	if _, err := io.Copy(dst, file); err != nil {
-		h.respondWithError(w, http.StatusInternalServerError, "Failed to save file")
+		httputil.RespondWithError(w, http.StatusInternalServerError, "Failed to save file")
 		return
 	}
 
 	url := fmt.Sprintf("/api/v1/uploads/%s", filename)
-	h.respondWithJSON(w, http.StatusCreated, map[string]string{"url": url})
+	httputil.RespondWithJSON(w, http.StatusCreated, map[string]string{"url": url})
 }
 
 // DeleteFile removes an uploaded file
@@ -73,36 +74,19 @@ func (h *UploadHandler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	filename := chi.URLParam(r, "filename")
 	cleanName := filepath.Base(filename)
 	if cleanName == "." || cleanName == "/" || cleanName != filename {
-		h.respondWithError(w, http.StatusBadRequest, "Invalid filename")
+		httputil.RespondWithError(w, http.StatusBadRequest, "Invalid filename")
 		return
 	}
 
 	path := filepath.Join("assets/uploads", filename)
 	if err := os.Remove(path); err != nil {
 		if os.IsNotExist(err) {
-			h.respondWithError(w, http.StatusNotFound, "File not found")
+			httputil.RespondWithError(w, http.StatusNotFound, "File not found")
 			return
 		}
-		h.respondWithError(w, http.StatusInternalServerError, "Failed to delete file")
+		httputil.RespondWithError(w, http.StatusInternalServerError, "Failed to delete file")
 		return
 	}
 
-	h.respondWithJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
-}
-
-// Helpers for JSON responses
-func (h *UploadHandler) respondWithError(w http.ResponseWriter, code int, message string) {
-	h.respondWithJSON(w, code, map[string]string{"error": message})
-}
-
-func (h *UploadHandler) respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, err := json.Marshal(payload)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(`{"error":"Failed to marshal response"}`))
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	_, _ = w.Write(response)
+	httputil.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
