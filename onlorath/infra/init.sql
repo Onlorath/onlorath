@@ -47,8 +47,10 @@ CREATE TABLE IF NOT EXISTS messages (
 
 -- Performans indexleri
 CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_session_id ON conversations(session_id);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_role_created_at ON messages(role, created_at);
 
 -- Tablo güncellendiğinde tetiklenecek mekanizma (conversations için)
 CREATE TRIGGER update_conversations_modtime
