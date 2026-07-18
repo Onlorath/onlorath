@@ -1,26 +1,226 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-surface-container-lowest: #0e0e11;
+  --color-surface-variant: #353438;
+  --color-inverse-surface: #e5e1e5;
+  --color-surface-container-high: #2a2a2d;
+  --color-primary-fixed-dim: #00dbe9;
+  --color-background: #131316;
+  --color-primary-container: #00f0ff;
+  --color-on-secondary-container: #480063;
+  --color-on-primary-container: #006970;
+  --color-on-surface: #e5e1e5;
+  --color-surface-container-highest: #353438;
+  --color-secondary-fixed-dim: #ecb2ff;
+  --color-on-primary-fixed-variant: #004f54;
+  --color-on-primary-fixed: #002022;
+  --color-on-tertiary-container: #8b5100;
+  --color-tertiary: #fff4ed;
+  --color-on-secondary-fixed-variant: #74009f;
+  --color-on-secondary-fixed: #320047;
+  --color-tertiary-container: #ffd1a6;
+  --color-tertiary-fixed-dim: #ffb86f;
+  --color-on-tertiary-fixed: #2c1600;
+  --color-on-tertiary: #4a2800;
+  --color-surface-tint: #00dbe9;
+  --color-on-primary: #00363a;
+  --color-inverse-primary: #006970;
+  --color-secondary-fixed: #f8d8ff;
+  --color-outline-variant: #3b494b;
+  --color-secondary: #ecb2ff;
+  --color-on-background: #e5e1e5;
+  --color-on-surface-variant: #b9cacb;
+  --color-primary: #dbfcff;
+  --color-surface-container: #201f22;
+  --color-on-error-container: #ffdad6;
+  --color-inverse-on-surface: #313033;
+  --color-surface-container-low: #1c1b1e;
+  --color-surface-dim: #131316;
+  --color-on-tertiary-fixed-variant: #693c00;
+  --color-on-secondary: #520071;
+  --color-surface: #131316;
+  --color-secondary-container: #cf5cff;
+  --color-on-error: #690005;
+  --color-outline: #849495;
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-surface-bright: #39393c;
+  --color-primary-fixed: #7df4ff;
+  --color-tertiary-fixed: #ffdcbd;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --radius: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+
+  --spacing-gutter: 24px;
+  --spacing-max-width: 1280px;
+  --spacing-unit: 4px;
+  --spacing-margin-mobile: 20px;
+  --spacing-margin-desktop: 64px;
+
+  --font-headline-lg-mobile: "Geist", sans-serif;
+  --font-label-mono: "JetBrains Mono", monospace;
+  --font-code-sm: "JetBrains Mono", monospace;
+  --font-body-md: "Inter", sans-serif;
+  --font-headline-md: "Geist", sans-serif;
+  --font-display: "Geist", sans-serif;
+  --font-headline-lg: "Geist", sans-serif;
+  --font-body-lg: "Inter", sans-serif;
+
+  --text-headline-lg-mobile: 32px;
+  --text-headline-lg-mobile--line-height: 1.2;
+  --text-headline-lg-mobile--font-weight: 600;
+
+  --text-label-mono: 12px;
+  --text-label-mono--line-height: 1.0;
+  --text-label-mono--letter-spacing: 0.1em;
+  --text-label-mono--font-weight: 500;
+
+  --text-code-sm: 13px;
+  --text-code-sm--line-height: 1.5;
+  --text-code-sm--font-weight: 400;
+
+  --text-body-md: 16px;
+  --text-body-md--line-height: 1.6;
+  --text-body-md--font-weight: 400;
+
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 1.4;
+  --text-headline-md--font-weight: 500;
+
+  --text-display: 72px;
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.04em;
+  --text-display--font-weight: 700;
+
+  --text-headline-lg: 48px;
+  --text-headline-lg--line-height: 1.2;
+  --text-headline-lg--letter-spacing: -0.02em;
+  --text-headline-lg--font-weight: 600;
+
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 1.6;
+  --text-body-lg--font-weight: 400;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #050507;
+  color: #e5e1e5;
+  overflow-x: hidden;
+  font-family: var(--font-body-md);
+}
+
+.glass-panel {
+  background: rgba(20, 20, 25, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: -1;
+  margin: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(0, 219, 233, 0.2) 0%, rgba(0, 219, 233, 0) 100%);
+}
+
+.glow-text {
+  text-shadow: 0 0 15px rgba(0, 219, 233, 0.3);
+}
+
+.aurora-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -2;
+  pointer-events: none;
+}
+
+.boot-screen {
+  position: fixed;
+  inset: 0;
+  background: #050507;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  transition: opacity 1s ease-out;
+}
+
+.terminal-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background-color: var(--color-primary-fixed-dim);
+  animation: blink 1s step-end infinite;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.btn-primary {
+  background-color: var(--color-primary-fixed-dim);
+  color: #050507;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn-glass {
+  background: transparent;
+  border: 1px solid rgba(0, 219, 233, 0.2);
+  color: #e5e1e5;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-glass:hover {
+  border-color: rgba(0, 219, 233, 0.5);
+  background: rgba(0, 219, 233, 0.05);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.nav-link.active {
+  color: var(--color-primary-fixed-dim);
+  border-bottom: 2px solid var(--color-primary-fixed-dim);
+  padding-bottom: 4px;
+}
+
+/* Prevent Material Symbols from flashing text on load */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  overflow: hidden;
+  max-width: 1em; /* Only allows the icon width, cutting off longer fallback words */
 }

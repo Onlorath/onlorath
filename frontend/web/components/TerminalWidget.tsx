@@ -342,66 +342,75 @@ export default function TerminalWidget({ lang = 'tr' }: TerminalWidgetProps) {
 
   return (
     <div
-      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden font-mono shadow-2xl backdrop-blur-md cursor-text"
+      className="glass-panel rounded-xl overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-primary-fixed-dim/20 max-w-4xl mx-auto w-full cursor-text flex flex-col"
       onClick={focusInput}
     >
-      {/* Terminal Title Bar */}
-      <div className="bg-slate-900 border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 rounded-full bg-red-500/80" />
-          <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-          <div className="w-3 h-3 rounded-full bg-green-500/80" />
+      {/* Terminal Header */}
+      <div className="bg-surface-container-high/80 px-4 py-2 flex items-center justify-between border-b border-surface-variant/50">
+        <div className="flex space-x-2">
+          <div className="w-3 h-3 rounded-full bg-surface-variant" />
+          <div className="w-3 h-3 rounded-full bg-surface-variant" />
+          <div className="w-3 h-3 rounded-full bg-surface-variant" />
         </div>
-        <div className="text-xs text-slate-500 font-semibold flex items-center gap-1.5 select-none">
-          <TerminalIcon className="w-3.5 h-3.5" />
-          zsh - guest@onlorath-server
+        <div className="font-label-mono text-[10px] text-on-surface-variant/50 uppercase tracking-widest">
+          {lang === 'en' ? 'A.I. ORA - System Assistant' : 'A.I. ORA - Sistem Asistanı'}
         </div>
-        <div className="w-12" /> {/* Spacer */}
+        <div className="material-symbols-outlined text-[14px] text-on-surface-variant/50">terminal</div>
       </div>
 
-      {/* Terminal Output Area */}
-      <div ref={outputAreaRef} className="p-5 min-h-[320px] max-h-[480px] overflow-y-auto text-sm space-y-2 select-text custom-scrollbar">
-        {history.map((line, idx) => (
-          <div
-            key={idx}
-            className={`whitespace-pre-wrap leading-relaxed ${line.type === 'input' ? 'text-emerald-400 font-semibold' :
-                line.type === 'error' ? 'text-red-400' :
-                  line.type === 'success' ? 'text-cyan-400 font-bold' :
-                    'text-slate-300'
+      {/* Terminal Body */}
+      <div className="p-6 md:p-8 bg-surface-container-lowest/50 font-code-sm text-code-sm text-on-surface-variant min-h-[320px] max-h-[480px] flex flex-col relative overflow-hidden">
+        {/* Subtle noise texture overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+          style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E')" }} 
+        />
+        
+        <div ref={outputAreaRef} className="space-y-3 z-10 flex-grow overflow-y-auto custom-scrollbar">
+          {history.map((line, idx) => (
+            <div
+              key={idx}
+              className={`whitespace-pre-wrap leading-relaxed flex items-start ${
+                line.type === 'input' ? 'text-primary-fixed-dim/80' :
+                line.type === 'error' ? 'text-error' :
+                line.type === 'success' ? 'text-secondary-fixed-dim' :
+                'text-on-surface'
               }`}
-          >
-            {line.isMarkdown ? parseTerminalMarkdown(line.text) : line.text}
-          </div>
-        ))}
-
-        {/* Terminal Input Line */}
-        <div className="flex items-center text-emerald-400 pt-1">
-          <span className="font-semibold mr-2 shrink-0">
-            {isChatLoading ? (
-              <span className="flex items-center gap-1.5">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
-                <span className="text-cyan-400">{lang === 'en' ? 'processing' : 'işleniyor'}</span>
-              </span>
-            ) : (
-              '~/onlorath $'
-            )}
-          </span>
-          <input
-            ref={inputRef}
-            type="text"
-            className="bg-transparent border-none outline-none text-slate-100 flex-grow py-0 px-0 focus:ring-0 text-sm caret-emerald-400 font-mono disabled:opacity-50 placeholder-slate-700"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isChatLoading}
-            placeholder={placeholder}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck="false"
-          />
+            >
+              {line.type === 'input' && <span className="mr-2">&gt;</span>}
+              {line.type !== 'input' && <span className="text-secondary-fixed-dim mr-2">ora@sys:~$</span>}
+              <div className="flex-1">
+                {line.isMarkdown ? parseTerminalMarkdown(line.text) : line.text}
+              </div>
+            </div>
+          ))}
+          <div ref={terminalEndRef} />
         </div>
-        <div ref={terminalEndRef} />
+      </div>
+
+      {/* Terminal Input Area */}
+      <div className="bg-surface-container-low/80 p-4 border-t border-surface-variant/30 flex items-center z-10">
+        <span className="text-primary-fixed-dim font-code-sm mr-3">
+          {isChatLoading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-primary-fixed-dim" />
+          ) : (
+            '❯'
+          )}
+        </span>
+        <input
+          ref={inputRef}
+          type="text"
+          className="w-full bg-transparent border-none outline-none focus:ring-0 font-code-sm text-on-surface placeholder-on-surface-variant/30 p-0 disabled:opacity-50"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={isChatLoading}
+          placeholder={isChatLoading ? (lang === 'en' ? 'Processing...' : 'İşleniyor...') : placeholder}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
+        />
       </div>
     </div>
   );

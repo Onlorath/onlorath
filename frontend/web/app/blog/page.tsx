@@ -2,43 +2,30 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Loader2, FileText } from 'lucide-react';
+import { Starfield } from '../../components/Starfield';
+import { Loader2 } from 'lucide-react';
 import { blogAPI, Blog } from '../../lib/api';
-
-const Github = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
-    <path d="M9 18c-4.51 2-5-2-7-2" />
-  </svg>
-);
-
-const Linkedin = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-    <rect width="4" height="12" x="2" y="9" />
-    <circle cx="4" cy="4" r="2" />
-  </svg>
-);
 
 export default function BlogListPage() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [lang, setLang] = useState<'tr' | 'en'>('tr');
+
+  useEffect(() => {
+    const savedLang = localStorage.getItem('onlorath_lang');
+    if (savedLang === 'en' || savedLang === 'tr') {
+      setLang(savedLang);
+    }
+  }, []);
+
+  const toggleLanguage = () => {
+    const nextLang = lang === 'tr' ? 'en' : 'tr';
+    setLang(nextLang);
+    localStorage.setItem('onlorath_lang', nextLang);
+  };
+
+  const isEn = lang === 'en';
 
   useEffect(() => {
     blogAPI.list()
@@ -47,108 +34,121 @@ export default function BlogListPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const highlightedBlog = blogs.length > 0 ? blogs[0] : null;
+  const listBlogs = blogs.length > 1 ? blogs.slice(1) : [];
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-300 font-sans selection:bg-fuchsia-500/30">
-      {/* Navigation */}
-      <nav className="border-b border-slate-900/60 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/" className="font-mono text-xl font-bold tracking-tighter text-white select-none">
-            <span className="text-fuchsia-400">~/</span>onlorath<span className="animate-pulse">_</span>
-          </Link>
-          <div className="flex space-x-6 text-sm font-medium">
-            <Link href="/#about" className="hover:text-fuchsia-400 transition-colors">Hakkımda</Link>
-            <Link href="/#skills" className="hover:text-fuchsia-400 transition-colors">Yetenekler</Link>
-            <Link href="/blog" className="text-fuchsia-400 transition-colors">Loglar (Blog)</Link>
-            <Link href="/projects" className="hover:text-fuchsia-400 transition-colors">Sistemler</Link>
+    <>
+      <Starfield />
+      <div className="aurora-bg"></div>
+
+      
+
+      <main className="flex-grow w-full max-w-max-width mx-auto px-margin-mobile md:px-margin-desktop py-12 flex flex-col gap-12 relative z-10">
+        <header className="flex flex-col gap-2">
+          <div className="font-label-mono text-label-mono text-primary-fixed-dim flex items-center gap-2">
+            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>terminal</span>
+            SYS.QUERY: SELECT * FROM MISSION_LOGS ORDER BY TIMESTAMP DESC
           </div>
-        </div>
-      </nav>
-
-      <main className="max-w-5xl mx-auto px-6 py-12 md:py-20 relative">
-        {/* Background visual accents */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-fuchsia-600/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/3 right-1/3 w-96 h-96 bg-cyan-600/5 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="mb-10 relative z-10">
-          <Link 
-            href="/" 
-            className="inline-flex items-center gap-1.5 text-xs font-mono text-slate-500 hover:text-fuchsia-400 transition-colors mb-6 group"
-          >
-            <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-            <span>Ana Sayfaya Dön</span>
-          </Link>
-
-          <h2 className="text-3xl md:text-4xl font-bold text-white flex items-center tracking-tight mb-4">
-            Mission Log (Yazılar)
-          </h2>
-          <p className="text-slate-400 max-w-xl text-sm md:text-base leading-relaxed">
-            Yazılım geliştirme süreci, sistem mimarileri ve mühendislik günlüklerim.
+          <h1 className="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface">
+            {isEn ? 'System Logs' : 'Sistem Logları'}<span className="text-primary-fixed-dim cursor-blink">_</span>
+          </h1>
+          <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+            {isEn ? 'Operational records, system updates, and technical analysis reports. Data is accessible via standard encryption protocols.' : 'Operasyonel kayıtlar, sistem güncellemeleri ve teknik analiz raporları. Veriler standart şifreleme protokolleri ile erişime açıktır.'}
           </p>
-        </div>
+        </header>
 
         {loading ? (
-          <div className="h-64 flex items-center justify-center relative z-10">
-            <Loader2 className="w-8 h-8 animate-spin text-fuchsia-400" />
+          <div className="h-64 flex items-center justify-center w-full">
+            <Loader2 className="w-8 h-8 animate-spin text-primary-fixed-dim" />
           </div>
         ) : blogs.length === 0 ? (
-          <div className="h-64 flex items-center justify-center relative z-10 text-slate-500 font-mono text-xs border border-dashed border-slate-900 rounded-2xl bg-slate-950/20">
-            Henüz eklenmiş bir log kaydı bulunamadı.
+          <div className="h-64 flex items-center justify-center font-label-mono text-label-mono text-on-surface-variant border border-dashed border-outline-variant/30 rounded-none bg-surface-container/20">
+            {isEn ? 'No log entries found.' : 'Henüz eklenmiş bir log kaydı bulunamadı.'}
           </div>
         ) : (
-          <div className="grid md:grid-cols-3 gap-6 relative z-10 mb-20">
-            {blogs.map((blog) => (
-              <Link
-                key={blog.id}
-                href={`/blog/${blog.slug}`}
-                className="group flex flex-col bg-slate-900/20 border border-slate-800/80 rounded-2xl overflow-hidden hover:border-fuchsia-500/30 transition-all duration-300 hover:translate-y-[-2px] h-full"
-              >
-                {blog.cover_image ? (
-                  <div className="h-40 w-full overflow-hidden relative">
-                    <img
-                      src={blog.cover_image}
-                      alt={blog.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
+          <>
+            {highlightedBlog && (
+              <Link href={`/blog/${highlightedBlog.slug}`} className="block">
+                <section className="glass-panel p-6 md:p-8 rounded-none flex flex-col md:flex-row gap-8 items-center group glow-hover transition-all duration-300 cursor-pointer relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-primary-container/5 rounded-full blur-3xl group-hover:bg-primary-container/10 transition-all"></div>
+                  <div className="w-full md:w-1/2 aspect-video rounded-none border border-outline-variant/30 overflow-hidden relative">
+                    <div className="absolute top-2 left-2 z-10 bg-surface-container-lowest/80 backdrop-blur font-label-mono text-label-mono text-primary-fixed-dim px-2 py-1 rounded-none border border-primary-fixed-dim/30">
+                      {isEn ? 'HIGHLIGHTED_' : 'ÖNE ÇIKAN_'}
+                    </div>
+                    {highlightedBlog.cover_image ? (
+                      <img 
+                        src={highlightedBlog.cover_image} 
+                        alt={highlightedBlog.title} 
+                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-105 transform"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-surface-container-high flex items-center justify-center">
+                         <span className="material-symbols-outlined text-[48px] text-on-surface-variant/30">description</span>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="h-40 w-full bg-slate-900 border-b border-slate-850 flex items-center justify-center text-slate-700">
-                    <FileText className="w-12 h-12" />
+                  <div className="w-full md:w-1/2 flex flex-col gap-4 z-10">
+                    <div className="flex gap-2 items-center font-label-mono text-label-mono text-on-surface-variant">
+                      <span className="text-secondary-fixed-dim">[{new Date(highlightedBlog.created_at).toLocaleDateString('tr-TR')}]</span>
+                      <span className="w-1 h-1 bg-surface-variant rounded-full"></span>
+                      <span>{isEn ? 'SYSTEM LOG' : 'SİSTEM LOGU'}</span>
+                    </div>
+                    <h2 className="font-headline-md text-headline-md text-primary group-hover:text-primary-fixed-dim transition-colors">
+                      {highlightedBlog.title}
+                    </h2>
+                    <p className="font-body-md text-body-md text-on-surface-variant line-clamp-3">
+                      {highlightedBlog.content.replace(/[#*`_[\]()]/g, '')}
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <span className="px-2 py-1 bg-surface-container border border-outline-variant/30 rounded-none text-primary-fixed-dim font-label-mono text-label-mono">LOG</span>
+                    </div>
                   </div>
-                )}
-                <div className="p-5 flex flex-col flex-1 space-y-3">
-                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">
-                    {new Date(blog.created_at).toLocaleDateString('tr-TR')}
-                  </span>
-                  <h3 className="font-bold text-white text-base leading-snug group-hover:text-fuchsia-400 transition-colors line-clamp-2">
-                    {blog.title}
-                  </h3>
-                  <p className="text-slate-400 text-xs line-clamp-3 leading-relaxed flex-grow">
-                    {blog.content.replace(/[#*`_[\]()]/g, '')}
-                  </p>
-                  <div className="text-[11px] font-semibold text-fuchsia-400 tracking-wider flex items-center font-mono pt-2">
-                    [ READ LOG → ]
-                  </div>
-                </div>
+                </section>
               </Link>
-            ))}
-          </div>
+            )}
+
+            {listBlogs.length > 0 && (
+              <section className="flex flex-col gap-0 border-t border-surface-variant">
+                {listBlogs.map((blog) => (
+                  <Link key={blog.id} href={`/blog/${blog.slug}`} className="block">
+                    <article className="group flex flex-col md:flex-row gap-4 p-4 md:p-6 border-b border-surface-variant hover:bg-surface-container/20 transition-colors cursor-pointer items-start md:items-center">
+                      <div className="w-full md:w-48 font-label-mono text-label-mono text-secondary-fixed-dim shrink-0 mt-1 md:mt-0">
+                        [{new Date(blog.created_at).toLocaleDateString('tr-TR')}]
+                      </div>
+                      <div className="flex-grow flex flex-col gap-1">
+                        <h3 className="font-headline-md text-[20px] font-medium text-on-surface group-hover:text-primary-fixed-dim transition-colors">
+                          {blog.title}
+                        </h3>
+                        <p className="font-body-md text-body-md text-on-surface-variant line-clamp-2">
+                          {blog.content.replace(/[#*`_[\]()]/g, '')}
+                        </p>
+                      </div>
+                      <div className="hidden lg:flex gap-2 shrink-0">
+                        <span className="px-2 py-1 border border-outline-variant/50 rounded-none text-on-surface-variant font-label-mono text-label-mono">LOG</span>
+                      </div>
+                    </article>
+                  </Link>
+                ))}
+              </section>
+            )}
+          </>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900/60 py-8 bg-slate-950 mt-auto">
-        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500">
-          <p>© {new Date().getFullYear()} onlorath. Engineered systematically.</p>
-          <div className="flex space-x-6 mt-4 md:mt-0 font-mono text-xs">
-            <a href="https://github.com/onlorath" target="_blank" rel="noopener noreferrer" className="hover:text-fuchsia-400 transition-colors flex items-center gap-1.5">
-              <Github className="w-4 h-4"/> GitHub
-            </a>
-            <a href="https://www.linkedin.com/in/yusuf-albayrak/" target="_blank" rel="noopener noreferrer" className="hover:text-fuchsia-400 transition-colors flex items-center gap-1.5">
-              <Linkedin className="w-4 h-4"/> LinkedIn
-            </a>
+      <footer className="bg-transparent border-t border-primary-fixed-dim/10 mt-auto relative z-20">
+        <div className="flex flex-col md:flex-row justify-between items-center w-full px-margin-mobile md:px-margin-desktop py-8 max-w-max-width mx-auto">
+          <div className="font-label-mono text-label-mono text-primary-fixed-dim mb-4 md:mb-0 opacity-80">
+            {isEn ? 'All systems online' : 'Tüm sistemler çevrimiçi'}
           </div>
+          <ul className="flex gap-6">
+            <li><a className="font-label-mono text-label-mono text-on-surface-variant hover:text-primary-fixed-dim hover:glow-sm transition-all opacity-80 hover:opacity-100" href="https://github.com/onlorath" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            <li><a className="font-label-mono text-label-mono text-on-surface-variant hover:text-primary-fixed-dim hover:glow-sm transition-all opacity-80 hover:opacity-100" href="https://linkedin.com/in/yusuf-albayrak" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
+            <li><a className="font-label-mono text-label-mono text-on-surface-variant hover:text-primary-fixed-dim hover:glow-sm transition-all opacity-80 hover:opacity-100" href="mailto:ysfalbayrak02@gmail.com">Email</a></li>
+          </ul>
         </div>
       </footer>
-    </div>
+    </>
   );
 }

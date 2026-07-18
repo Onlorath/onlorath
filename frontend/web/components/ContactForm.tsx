@@ -1,27 +1,33 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Send, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
-export default function ContactForm() {
-  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+interface ContactFormProps {
+  lang?: 'tr' | 'en';
+}
+
+export default function ContactForm({ lang = 'tr' }: ContactFormProps) {
+  const [formData, setFormData] = useState({ name: '', email: '', message: '', honeypot: '' });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
+  const isEn = lang === 'en';
+
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
-    if (!formData.name.trim()) newErrors.name = 'İsim alanı zorunludur.';
+    if (!formData.name.trim()) newErrors.name = isEn ? 'Identifier required.' : 'Kimlik zorunludur.';
     
     if (!formData.email.trim()) {
-      newErrors.email = 'E-posta alanı zorunludur.';
+      newErrors.email = isEn ? 'Relay node required.' : 'E-posta zorunludur.';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Geçersiz e-posta formatı.';
+      newErrors.email = isEn ? 'Invalid format.' : 'Geçersiz format.';
     }
     
     if (!formData.message.trim()) {
-      newErrors.message = 'Mesaj alanı zorunludur.';
+      newErrors.message = isEn ? 'Payload required.' : 'Mesaj zorunludur.';
     } else if (formData.message.trim().length < 10) {
-      newErrors.message = 'Mesajınız en az 10 karakter olmalıdır.';
+      newErrors.message = isEn ? 'Payload too short.' : 'Mesaj çok kısa.';
     }
 
     setErrors(newErrors);
@@ -34,12 +40,31 @@ export default function ContactForm() {
 
     setStatus('sending');
 
-    // Simulate sending message to backend API with a 1.2 second latency
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      setStatus('success');
-      setFormData({ name: '', email: '', message: '' });
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/v1/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          message: formData.message,
+          honeypot: formData.honeypot
+        })
+      });
+
+      if (response.ok) {
+        setStatus('success');
+        setFormData({ name: '', email: '', message: '', honeypot: '' });
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        console.error('API Error:', errData);
+        setStatus('error');
+      }
     } catch (err) {
+      console.error('Submission Error:', err);
       setStatus('error');
     }
   };
@@ -52,126 +77,106 @@ export default function ContactForm() {
     }
   };
 
-  if (status === 'success') {
-    return (
-      <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-8 text-center flex flex-col items-center justify-center min-h-[350px] animate-fade-in">
-        <CheckCircle className="w-16 h-16 text-emerald-400 mb-4 animate-bounce" />
-        <h3 className="text-xl font-bold text-white mb-2">Mesajınız İletildi</h3>
-        <p className="text-slate-400 text-sm max-w-sm mb-6">
-          Sistem mimarisi ve projeler hakkında gönderdiğiniz mesaj başarıyla kaydedildi. En kısa sürede geri dönüş yapacağım.
-        </p>
-        <button
-          onClick={() => setStatus('idle')}
-          className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold rounded-lg border border-slate-700 transition-colors"
-        >
-          Yeni Mesaj Gönder
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-slate-900/30 border border-slate-800/80 rounded-xl p-6 shadow-xl backdrop-blur-sm relative overflow-hidden">
-      <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-        <Send className="w-4 h-4 text-emerald-400" />
-        Mesaj Gönder
-      </h3>
-
-      {status === 'error' && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg flex items-center gap-2 mb-4 text-xs font-mono">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>Mesaj gönderilirken hata oluştu. Lütfen tekrar deneyin.</span>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-            İsminiz
+    <div className="glass-panel p-8 h-full flex flex-col relative border border-primary-fixed-dim/20 rounded-none before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-b before:from-primary-fixed-dim/5 before:to-transparent before:pointer-events-none overflow-hidden">
+      {/* Honeypot field (hidden from real users, filled by bots) */}
+      <input type="text" name="honeypot" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" value={formData.honeypot || ''} onChange={handleChange} />
+      <div className="flex items-center space-x-2 mb-8 border-b border-surface-variant pb-4 relative z-10">
+        <div className="w-3 h-3 rounded-full bg-surface-variant"></div>
+        <div className="w-3 h-3 rounded-full bg-surface-variant"></div>
+        <div className="w-3 h-3 rounded-full bg-surface-variant"></div>
+        <span className="font-label-mono text-label-mono text-on-surface-variant ml-4">TERMINAL_INPUT // UPLINK</span>
+      </div>
+      
+      <form onSubmit={handleSubmit} className="flex-grow flex flex-col space-y-6 relative z-10" id="uplink-form">
+        <div className="group relative">
+          <label className="font-label-mono text-label-mono text-primary-fixed-dim block mb-2 opacity-80 group-focus-within:opacity-100 transition-opacity" htmlFor="id_name">
+            &gt; IDENTIFIER [Name]
           </label>
-          <input
-            type="text"
+          <input 
+            className={`w-full bg-[#0A0A0C] border ${errors.name ? 'border-error' : 'border-surface-variant focus:border-primary-fixed-dim focus:shadow-[inset_0_0_10px_rgba(0,219,233,0.1)]'} rounded-none text-primary-fixed-dim font-code-sm px-4 py-3 transition-all duration-300 placeholder:text-surface-variant outline-none`}
+            id="id_name" 
             name="name"
-            placeholder="John Doe"
             value={formData.name}
             onChange={handleChange}
             disabled={status === 'sending'}
-            className={`w-full bg-slate-950/80 border text-slate-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all ${
-              errors.name ? 'border-red-500/50' : 'border-slate-850'
-            }`}
+            placeholder={isEn ? "Enter your designation..." : "Tanımlamanızı girin..."} 
+            type="text"
           />
-          {errors.name && (
-            <p className="text-red-400 text-xs mt-1 flex items-center gap-1 font-mono">
-              <AlertCircle className="w-3.5 h-3.5" />
-              {errors.name}
-            </p>
-          )}
+          {errors.name && <span className="font-code-sm text-error text-[11px] absolute -bottom-5 left-0">{errors.name}</span>}
         </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-            E-posta Adresiniz
+        
+        <div className="group relative">
+          <label className="font-label-mono text-label-mono text-primary-fixed-dim block mb-2 opacity-80 group-focus-within:opacity-100 transition-opacity" htmlFor="id_email">
+            &gt; RELAY_NODE [Email]
           </label>
-          <input
-            type="email"
+          <input 
+            className={`w-full bg-[#0A0A0C] border ${errors.email ? 'border-error' : 'border-surface-variant focus:border-primary-fixed-dim focus:shadow-[inset_0_0_10px_rgba(0,219,233,0.1)]'} rounded-none text-primary-fixed-dim font-code-sm px-4 py-3 transition-all duration-300 placeholder:text-surface-variant outline-none`}
+            id="id_email" 
             name="email"
-            placeholder="john@example.com"
             value={formData.email}
             onChange={handleChange}
             disabled={status === 'sending'}
-            className={`w-full bg-slate-950/80 border text-slate-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all ${
-              errors.email ? 'border-red-500/50' : 'border-slate-850'
-            }`}
+            placeholder={isEn ? "Enter return address..." : "Dönüş adresini girin..."} 
+            type="email"
           />
-          {errors.email && (
-            <p className="text-red-400 text-xs mt-1 flex items-center gap-1 font-mono">
-              <AlertCircle className="w-3.5 h-3.5" />
-              {errors.email}
-            </p>
-          )}
+          {errors.email && <span className="font-code-sm text-error text-[11px] absolute -bottom-5 left-0">{errors.email}</span>}
         </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-            Mesajınız
+        
+        <div className="group relative flex-grow flex flex-col">
+          <label className="font-label-mono text-label-mono text-primary-fixed-dim block mb-2 opacity-80 group-focus-within:opacity-100 transition-opacity" htmlFor="id_message">
+            &gt; PAYLOAD [Message]
           </label>
-          <textarea
+          <textarea 
+            className={`w-full flex-grow bg-[#0A0A0C] border ${errors.message ? 'border-error' : 'border-surface-variant focus:border-primary-fixed-dim focus:shadow-[inset_0_0_10px_rgba(0,219,233,0.1)]'} rounded-none text-primary-fixed-dim font-code-sm px-4 py-3 transition-all duration-300 placeholder:text-surface-variant resize-none outline-none`}
+            id="id_message" 
             name="message"
-            rows={4}
-            placeholder="Proje veya iş birlikleri hakkında mesajınızı yazın..."
             value={formData.message}
             onChange={handleChange}
             disabled={status === 'sending'}
-            className={`w-full bg-slate-950/80 border text-slate-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all resize-none ${
-              errors.message ? 'border-red-500/50' : 'border-slate-850'
-            }`}
-          />
-          {errors.message && (
-            <p className="text-red-400 text-xs mt-1 flex items-center gap-1 font-mono">
-              <AlertCircle className="w-3.5 h-3.5" />
-              {errors.message}
-            </p>
-          )}
+            placeholder={isEn ? "Enter transmission data..." : "İletişim verisini girin..."} 
+            rows={6}
+          ></textarea>
+          {errors.message && <span className="font-code-sm text-error text-[11px] absolute -bottom-5 left-0">{errors.message}</span>}
         </div>
-
-        <button
-          type="submit"
-          disabled={status === 'sending'}
-          className="w-full bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-semibold py-2.5 rounded-lg text-sm shadow-md hover:shadow-emerald-500/10 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {status === 'sending' ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Gönderiliyor...
-            </>
-          ) : (
-            <>
-              <Send className="w-4 h-4" />
-              Gönder
-            </>
-          )}
-        </button>
+        
+        <div className="pt-4 flex items-center justify-between">
+          <div className={`font-label-mono text-label-mono ${status === 'error' ? 'text-error' : 'text-surface-variant'}`} id="status-text">
+            STATUS: {status === 'sending' ? 'PROCESSING' : status === 'error' ? 'ERROR' : 'STANDBY'}
+          </div>
+          <button 
+            className="bg-primary-container text-on-primary-container font-label-mono text-label-mono px-8 py-3 uppercase tracking-wider hover:bg-primary transition-colors duration-300 flex items-center space-x-2 disabled:opacity-50" 
+            id="submit-btn" 
+            type="submit"
+            disabled={status === 'sending'}
+          >
+            <span>{isEn ? 'TRANSMIT' : 'İLET'}</span>
+            {status === 'sending' ? (
+              <Loader2 className="w-[18px] h-[18px] animate-spin" />
+            ) : (
+              <span className="material-symbols-outlined text-[18px]">send</span>
+            )}
+          </button>
+        </div>
       </form>
+
+      {/* Success State */}
+      {status === 'success' && (
+        <div className="absolute inset-0 bg-[#0A0A0C]/95 backdrop-blur-md flex flex-col items-center justify-center border border-primary-fixed-dim/50 z-20 animate-fade-in" id="success-state">
+          <span className="material-symbols-outlined text-[72px] text-primary-fixed-dim mb-4 drop-shadow-[0_0_15px_rgba(0,240,255,0.3)]">check_circle</span>
+          <h3 className="font-headline-md text-headline-md text-primary-fixed-dim mb-2">{isEn ? 'SIGNAL TRANSMITTED' : 'SİNYAL İLETİLDİ'}</h3>
+          <p className="font-code-sm text-code-sm text-on-surface-variant text-center max-w-sm">
+            {isEn ? 'Payload delivered successfully. Awaiting processing cycle.' : 'Paket başarıyla teslim edildi. İşlem döngüsü bekleniyor.'}
+          </p>
+          <button 
+            onClick={() => setStatus('idle')}
+            className="mt-8 border border-primary-fixed-dim/50 text-primary-fixed-dim font-label-mono px-6 py-2 hover:bg-primary-fixed-dim/10 transition-colors" 
+            id="reset-btn"
+          >
+            INITIATE_NEW
+          </button>
+        </div>
+      )}
     </div>
   );
 }

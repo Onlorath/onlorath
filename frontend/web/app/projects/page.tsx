@@ -2,73 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { GitBranch, Code2, ChevronLeft, Loader2 } from 'lucide-react';
+import { Starfield } from '../../components/Starfield';
+import { Loader2 } from 'lucide-react';
 import { projectAPI, Project } from '../../lib/api';
-
-// Custom SVG components to replace brand icons from lucide-react
-const Github = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
-    <path d="M9 18c-4.51 2-5-2-7-2" />
-  </svg>
-);
-
-const Linkedin = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-    <rect width="4" height="12" x="2" y="9" />
-    <circle cx="4" cy="4" r="2" />
-  </svg>
-);
-
-const translations = {
-  tr: {
-    backHome: "Ana Sayfaya Dön",
-    title: "Mimari & Projeler",
-    subtitle: "Tasarladığım, optimize ettiğim ve geliştirdiğim temel mimari katmanları ve altyapı projeleri.",
-    empty: "Henüz eklenmiş bir sistem modülü bulunamadı.",
-    navAbout: "Hakkımda",
-    navSkills: "Yetenekler",
-    navSystems: "Sistemler",
-    navContact: "İletişim",
-    footerText: "Engineered systematically.",
-  },
-  en: {
-    backHome: "Back to Home",
-    title: "Architecture & Projects",
-    subtitle: "Core architectural layers and infrastructure projects I have designed, optimized, and developed.",
-    empty: "No system modules have been added yet.",
-    navAbout: "About",
-    navSkills: "Skills",
-    navSystems: "Systems",
-    navContact: "Contact",
-    footerText: "Engineered systematically.",
-  }
-};
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [lang, setLang] = useState<'tr' | 'en'>('tr');
 
   useEffect(() => {
-    // Synchronize language state
     const savedLang = localStorage.getItem('onlorath_lang');
     if (savedLang === 'en' || savedLang === 'tr') {
       setLang(savedLang);
@@ -81,125 +25,186 @@ export default function ProjectsPage() {
     localStorage.setItem('onlorath_lang', nextLang);
   };
 
+  const isEn = lang === 'en';
+
   useEffect(() => {
     projectAPI.list()
-      .then((res) => {
-        setProjects(res.data || []);
-      })
-      .catch((err) => {
-        console.error('Failed to load projects:', err);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+      .then((res) => setProjects(res.data || []))
+      .catch((err) => console.error('Failed to load projects:', err))
+      .finally(() => setLoading(false));
   }, []);
 
-  const t = translations[lang];
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-300 font-sans selection:bg-cyan-500/30">
+    <>
+      <Starfield />
+      <div className="aurora-bg"></div>
+
       
-      {/* Navigation */}
-      <nav className="border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/" className="font-mono text-xl font-bold tracking-tighter text-white select-none">
-            <span className="text-cyan-450">~/</span>onlorath<span className="animate-pulse text-fuchsia-500">_</span>
-          </Link>
-          <div className="flex items-center space-x-6 text-sm font-medium">
-            <Link href="/#about" className="hover:text-cyan-400 transition-colors">{t.navAbout}</Link>
-            <Link href="/#skills" className="hover:text-cyan-400 transition-colors">{t.navSkills}</Link>
-            <Link href="/projects" className="text-cyan-400 transition-colors">{t.navSystems}</Link>
-            <Link href="/#contact" className="hover:text-cyan-400 transition-colors">{t.navContact}</Link>
-            <button 
-              onClick={toggleLanguage}
-              className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/30 transition-all font-mono text-xs flex items-center gap-1 select-none"
-            >
-              <span>🌐</span> {lang === 'tr' ? 'EN' : 'TR'}
-            </button>
-          </div>
-        </div>
-      </nav>
 
-      <main className="max-w-5xl mx-auto px-6 py-12 md:py-20 relative">
-        {/* Background visual accents */}
-        <div className="absolute top-1/4 left-1/3 w-96 h-96 bg-cyan-600/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-fuchsia-600/5 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="mb-10 relative z-10">
-          <Link 
-            href="/" 
-            className="inline-flex items-center gap-1.5 text-xs font-mono text-slate-500 hover:text-cyan-400 transition-colors mb-6 group"
-          >
-            <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-            <span>{t.backHome}</span>
-          </Link>
-
-          <h2 className="text-3xl md:text-4xl font-bold text-white flex items-center tracking-tight mb-4">
-            <GitBranch className="w-8 h-8 mr-3 text-cyan-400" /> {t.title}
-          </h2>
-          <p className="text-slate-400 max-w-xl text-sm md:text-base leading-relaxed">
-            {t.subtitle}
+      {/* Main Content */}
+      <main className="w-full px-margin-mobile md:px-margin-desktop max-w-max-width mx-auto pt-16 pb-24 relative z-10 flex-grow">
+        <header className="mb-16">
+          <h1 className="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-4">
+            {isEn ? 'Systems' : 'Sistemler'} <span className="text-primary-fixed-dim animate-pulse">_</span>
+          </h1>
+          <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
+            {isEn ? 'Active deployments and mission-critical applications currently operating in the production environment.' : 'Üretim ortamında aktif olarak çalışan görev kritik uygulamalar ve dağıtımlar.'}
           </p>
-        </div>
-        
+        </header>
+
         {loading ? (
-          <div className="h-64 flex items-center justify-center relative z-10">
-            <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+          <div className="h-64 flex items-center justify-center w-full">
+            <Loader2 className="w-8 h-8 animate-spin text-primary-fixed-dim" />
           </div>
         ) : projects.length === 0 ? (
-          <div className="h-64 flex items-center justify-center relative z-10 text-slate-500 font-mono text-xs border border-dashed border-slate-900 rounded-2xl bg-slate-950/20">
-            {t.empty}
+          <div className="h-64 flex items-center justify-center font-label-mono text-label-mono text-on-surface-variant border border-dashed border-outline-variant/30 rounded-none bg-surface-container/20">
+            {isEn ? 'No systems found.' : 'Henüz eklenmiş bir sistem modülü bulunamadı.'}
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-6 relative z-10 mb-20">
-            {projects.map((project) => (
-              <div key={project.id} className="group bg-slate-900/30 border border-slate-800/80 rounded-xl p-6 hover:bg-slate-900/60 hover:border-slate-700/80 transition-all duration-300 flex flex-col h-full relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-15 transition-all duration-300 group-hover:scale-110">
-                  <Code2 className="w-24 h-24 text-slate-400" />
-                </div>
-                
-                <div className="flex justify-between items-start mb-4 relative z-10">
-                  <h3 className="text-xl font-bold text-white tracking-tight">{project.title}</h3>
-                  <span className={`text-xs font-mono px-2.5 py-1 rounded border ${
-                    project.status === 'In Orbit' ? 'text-cyan-400 bg-cyan-500/5 border-cyan-500/10' :
-                    project.status === 'Landed' ? 'text-emerald-400 bg-emerald-500/5 border-emerald-500/10' :
-                    'text-yellow-400 bg-yellow-500/5 border-yellow-500/10'
-                  }`}>
-                    {project.status}
-                  </span>
-                </div>
-                
-                <p className="text-slate-400 text-sm leading-relaxed mb-6 relative z-10 flex-grow">
-                  {project.description}
-                </p>
-                
-                <div className="flex flex-wrap gap-2 relative z-10 mt-auto">
-                  {project.tech.map((t, i) => (
-                    <span key={i} className="text-xs font-mono text-cyan-400 bg-cyan-400/5 border border-cyan-500/10 px-2.5 py-1 rounded">
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+            {projects.map((project, index) => {
+              const layoutType = index % 3;
+              
+              if (layoutType === 0) {
+                // Horizontal 8-col layout
+                return (
+                  <article key={project.id} className="glass-panel rounded-none overflow-hidden md:col-span-8 flex flex-col transition-all duration-300 group">
+                    <div className="p-4 border-b border-primary-fixed-dim/20 flex justify-between items-center bg-surface-container-lowest/50">
+                      <span className="font-label-mono text-label-mono text-primary-fixed-dim uppercase tracking-wider">
+                        [SYS-0{index + 1}] // {project.title}
+                      </span>
+                      <span className="px-2 py-1 rounded-none-sm border border-primary-fixed-dim text-primary-fixed-dim font-label-mono text-label-mono flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-primary-fixed-dim animate-pulse"></span>
+                        {project.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="p-8 flex-grow flex flex-col md:flex-row gap-8">
+                      <div className="flex-1 flex flex-col justify-between">
+                        <div>
+                          <h2 className="font-headline-md text-headline-md text-on-surface mb-2">{project.title}</h2>
+                          <p className="font-body-md text-body-md text-on-surface-variant mb-6 line-clamp-3">
+                            {project.description}
+                          </p>
+                          <div className="flex flex-wrap gap-2 mb-8">
+                            {project.tech?.map((t, i) => (
+                              <span key={i} className="px-3 py-1 bg-surface-variant/50 border border-outline-variant rounded-none font-label-mono text-label-mono text-on-surface-variant">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <button className="inline-flex items-center gap-2 px-6 py-3 bg-transparent border border-primary-fixed-dim/20 text-primary-fixed-dim font-label-mono text-label-mono hover:bg-primary-fixed-dim/10 hover:border-primary-fixed-dim transition-all duration-300 rounded-none group-hover:glow-sm w-max">
+                          {isEn ? 'View System' : 'Sistemi Görüntüle'}
+                          <span className="material-symbols-outlined text-sm">arrow_outward</span>
+                        </button>
+                      </div>
+                      <div className="flex-1 relative rounded-none overflow-hidden border border-outline-variant/30 bg-surface-container-lowest aspect-video group-hover:border-primary-fixed-dim/30 transition-colors">
+                        {project.cover_image ? (
+                          <div className="bg-cover bg-center w-full h-full opacity-80 group-hover:opacity-100 transition-opacity mix-blend-screen" style={{ backgroundImage: `url('${project.cover_image}')` }}></div>
+                        ) : (
+                           <div className="w-full h-full flex items-center justify-center">
+                             <span className="material-symbols-outlined text-[48px] text-on-surface-variant/30">dns</span>
+                           </div>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                );
+              } else if (layoutType === 1) {
+                // Vertical 4-col layout
+                return (
+                  <article key={project.id} className="glass-panel rounded-none overflow-hidden md:col-span-4 flex flex-col transition-all duration-300 group">
+                    <div className="p-4 border-b border-primary-fixed-dim/20 flex justify-between items-center bg-surface-container-lowest/50">
+                      <span className="font-label-mono text-label-mono text-secondary-fixed-dim uppercase tracking-wider">
+                        [SYS-0{index + 1}] // {project.title}
+                      </span>
+                      <span className="px-2 py-1 rounded-none-sm border border-secondary-fixed-dim text-secondary-fixed-dim font-label-mono text-label-mono flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-secondary-fixed-dim animate-pulse"></span>
+                        {project.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="p-8 flex-grow flex flex-col">
+                      <div className="relative rounded-none overflow-hidden border border-outline-variant/30 bg-surface-container-lowest h-48 mb-6 group-hover:border-secondary-fixed-dim/30 transition-colors">
+                        {project.cover_image ? (
+                          <div className="bg-cover bg-center w-full h-full opacity-80 group-hover:opacity-100 transition-opacity mix-blend-screen" style={{ backgroundImage: `url('${project.cover_image}')` }}></div>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="material-symbols-outlined text-[48px] text-on-surface-variant/30">dns</span>
+                          </div>
+                        )}
+                      </div>
+                      <h2 className="font-headline-md text-headline-md text-on-surface mb-2">{project.title}</h2>
+                      <p className="font-body-md text-body-md text-on-surface-variant mb-6 flex-grow line-clamp-3">
+                        {project.description}
+                      </p>
+                      <div className="flex flex-wrap gap-2 mb-8">
+                        {project.tech?.map((t, i) => (
+                          <span key={i} className="px-3 py-1 bg-surface-variant/50 border border-outline-variant rounded-none font-label-mono text-label-mono text-on-surface-variant">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                      <button className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-transparent border border-outline-variant/50 text-on-surface-variant font-label-mono text-label-mono hover:text-secondary-fixed-dim hover:border-secondary-fixed-dim transition-all duration-300 rounded-none">
+                        {isEn ? 'View System' : 'Sistemi Görüntüle'}
+                        <span className="material-symbols-outlined text-sm">arrow_outward</span>
+                      </button>
+                    </div>
+                  </article>
+                );
+              } else {
+                // Horizontal 12-col layout
+                return (
+                  <article key={project.id} className="glass-panel rounded-none overflow-hidden md:col-span-12 flex flex-col md:flex-row transition-all duration-300 group">
+                    <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-primary-fixed-dim/20 bg-surface-container-lowest/50 p-8 flex flex-col justify-center">
+                      <span className="font-label-mono text-label-mono text-primary-fixed-dim uppercase tracking-wider mb-2">
+                        [SYS-0{index + 1}] // {project.title}
+                      </span>
+                      <h2 className="font-headline-md text-headline-md text-on-surface mb-4">{project.title}</h2>
+                      <p className="font-body-md text-body-md text-on-surface-variant mb-6 line-clamp-3">
+                        {project.description}
+                      </p>
+                      <div className="flex flex-wrap gap-2 mb-8">
+                        {project.tech?.map((t, i) => (
+                          <span key={i} className="px-3 py-1 bg-surface-variant/50 border border-outline-variant rounded-none font-label-mono text-label-mono text-on-surface-variant">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                      <button className="inline-flex items-center gap-2 px-6 py-3 bg-transparent border border-primary-fixed-dim/20 text-primary-fixed-dim font-label-mono text-label-mono hover:bg-primary-fixed-dim/10 hover:border-primary-fixed-dim transition-all duration-300 rounded-none w-max">
+                        {isEn ? 'View System' : 'Sistemi Görüntüle'}
+                        <span className="material-symbols-outlined text-sm">arrow_outward</span>
+                      </button>
+                    </div>
+                    <div className="w-full md:w-2/3 p-8 flex items-center justify-center relative overflow-hidden bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-surface-container-highest to-surface-container-lowest">
+                      <div className="w-full h-full rounded-none overflow-hidden border border-outline-variant/30 group-hover:border-primary-fixed-dim/30 transition-colors bg-surface-container-lowest">
+                        {project.cover_image ? (
+                           <div className="bg-cover bg-center w-full h-full opacity-80 group-hover:opacity-100 transition-opacity mix-blend-screen" style={{ backgroundImage: `url('${project.cover_image}')` }}></div>
+                        ) : (
+                           <div className="w-full h-full flex items-center justify-center">
+                             <span className="material-symbols-outlined text-[48px] text-on-surface-variant/30">dns</span>
+                           </div>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                );
+              }
+            })}
           </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900/60 py-8 bg-slate-950">
-        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500">
-          <p>© {new Date().getFullYear()} onlorath. {t.footerText}</p>
-          <div className="flex space-x-6 mt-4 md:mt-0 font-mono text-xs">
-            <a href="https://github.com/onlorath" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors flex items-center gap-1.5">
-              <Github className="w-4 h-4"/> GitHub
-            </a>
-            <a href="https://www.linkedin.com/in/yusuf-albayrak/" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors flex items-center gap-1.5">
-              <Linkedin className="w-4 h-4"/> LinkedIn
-            </a>
-          </div>
+      <footer className="bg-transparent font-label-mono text-label-mono flex flex-col md:flex-row justify-between items-center w-full px-margin-mobile md:px-margin-desktop py-8 max-w-max-width mx-auto mt-24 border-t border-primary-fixed-dim/10 opacity-80 hover:opacity-100 transition-opacity z-10 relative">
+        <div className="text-on-surface-variant mb-4 md:mb-0">
+          {isEn ? 'All systems online' : 'Tüm sistemler çevrimiçi'}
+        </div>
+        <div className="flex items-center space-x-6">
+          <a className="text-on-surface-variant hover:text-primary-fixed-dim hover:glow-sm transition-all" href="https://github.com/onlorath" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a className="text-on-surface-variant hover:text-primary-fixed-dim hover:glow-sm transition-all" href="https://linkedin.com/in/yusuf-albayrak" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a className="text-on-surface-variant hover:text-primary-fixed-dim hover:glow-sm transition-all" href="mailto:ysfalbayrak02@gmail.com">Email</a>
         </div>
       </footer>
-    </div>
+    </>
   );
 }

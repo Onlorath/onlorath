@@ -515,10 +515,10 @@ export default function Rocket3D({ introPhase = 'completed', onFlyingComplete }:
       }
 
       renderer.render(scene, camera);
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
     };
 
-    animate();
+    let animationFrameId = requestAnimationFrame(animate);
 
     // --- Cleanup ---
     return () => {
@@ -550,9 +550,12 @@ export default function Rocket3D({ introPhase = 'completed', onFlyingComplete }:
       windowGlassMaterial.dispose();
       flameMaterial.dispose();
       innerFlameMaterial.dispose();
+      
+      cancelAnimationFrame(animationFrameId);
+      renderer.dispose();
 
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
+      if (containerRef.current && renderer.domElement && containerRef.current.contains(renderer.domElement)) {
+        containerRef.current.removeChild(renderer.domElement);
       }
     };
   }, []);
