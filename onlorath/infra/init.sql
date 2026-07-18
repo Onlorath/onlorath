@@ -21,6 +21,7 @@ END;
 $$ language 'plpgsql';
 
 -- Tablo güncellendiğinde tetiklenecek mekanizma
+DROP TRIGGER IF EXISTS update_users_modtime ON users;
 CREATE TRIGGER update_users_modtime
     BEFORE UPDATE ON users
     FOR EACH ROW
@@ -53,6 +54,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(conversation_id, 
 CREATE INDEX IF NOT EXISTS idx_messages_role_created_at ON messages(role, created_at);
 
 -- Tablo güncellendiğinde tetiklenecek mekanizma (conversations için)
+DROP TRIGGER IF EXISTS update_conversations_modtime ON conversations;
 CREATE TRIGGER update_conversations_modtime
     BEFORE UPDATE ON conversations
     FOR EACH ROW
@@ -77,6 +79,7 @@ CREATE INDEX IF NOT EXISTS idx_blogs_slug ON blogs(slug);
 CREATE INDEX IF NOT EXISTS idx_blogs_published ON blogs(published);
 CREATE INDEX IF NOT EXISTS idx_blogs_created_at ON blogs(created_at DESC);
 
+DROP TRIGGER IF EXISTS update_blogs_modtime ON blogs;
 CREATE TRIGGER update_blogs_modtime
     BEFORE UPDATE ON blogs
     FOR EACH ROW
@@ -99,6 +102,7 @@ CREATE TABLE IF NOT EXISTS projects (
 
 CREATE INDEX IF NOT EXISTS idx_projects_sort_order ON projects(sort_order);
 
+DROP TRIGGER IF EXISTS update_projects_modtime ON projects;
 CREATE TRIGGER update_projects_modtime
     BEFORE UPDATE ON projects
     FOR EACH ROW
