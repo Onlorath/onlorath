@@ -22,6 +22,11 @@ type Config struct {
 	RefreshTokenExpiry time.Duration
 	ClientURL          string
 	GeminiAPIKey       string
+	SMTPHost           string
+	SMTPPort           string
+	SMTPUser           string
+	SMTPPass           string
+	SMTPTo             string
 }
 
 func LoadConfig() (*Config, error) {
@@ -80,6 +85,11 @@ func LoadConfig() (*Config, error) {
 		RefreshTokenExpiry: refreshTokenExpiry,
 		ClientURL:          clientURL,
 		GeminiAPIKey:       geminiAPIKey,
+		SMTPHost:           getEnv("SMTP_HOST", "smtp.gmail.com"),
+		SMTPPort:           getEnv("SMTP_PORT", "587"),
+		SMTPUser:           getEnv("SMTP_USER", ""),
+		SMTPPass:           getEnv("SMTP_PASS", ""),
+		SMTPTo:             getEnv("SMTP_TO", "ysfalbayrak02@gmail.com"),
 	}, nil
 }
 

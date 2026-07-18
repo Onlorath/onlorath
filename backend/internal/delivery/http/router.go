@@ -19,6 +19,7 @@ func NewRouter(
 	blogHandler *handler.BlogHandler,
 	projectHandler *handler.ProjectHandler,
 	uploadHandler *handler.UploadHandler,
+	contactHandler *handler.ContactHandler,
 	authM *authMiddleware.AuthMiddleware,
 ) http.Handler {
 	r := chi.NewRouter()
@@ -66,6 +67,8 @@ func NewRouter(
 				r.Post("/logout", userHandler.Logout)
 			})
 		})
+
+		r.Post("/contact", contactHandler.SubmitContact)
 
 		// Public Chat routes (internal optional authentication verification)
 		r.Route("/chat", func(r chi.Router) {

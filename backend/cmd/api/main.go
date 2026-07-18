@@ -75,10 +75,22 @@ func main() {
 	// Upload DI
 	uploadHandler := handler.NewUploadHandler()
 
+	contactUseCase := usecase.NewContactUsecase(cfg)
+	contactHandler := handler.NewContactHandler(contactUseCase)
+
 	authM := middleware.NewAuthMiddleware(cfg)
 
 	// 4. Initialize Router
-	router := httpDelivery.NewRouter(cfg, userHandler, chatHandler, blogHandler, projectHandler, uploadHandler, authM)
+	router := httpDelivery.NewRouter(
+		cfg,
+		userHandler,
+		chatHandler,
+		blogHandler,
+		projectHandler,
+		uploadHandler,
+		contactHandler,
+		authM,
+	)
 
 	// 5. Configure and Start HTTP Server
 	serverAddr := fmt.Sprintf(":%s", cfg.Port)
