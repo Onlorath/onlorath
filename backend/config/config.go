@@ -22,11 +22,9 @@ type Config struct {
 	RefreshTokenExpiry time.Duration
 	ClientURL          string
 	GeminiAPIKey       string
-	SMTPHost           string
-	SMTPPort           string
-	SMTPUser           string
-	SMTPPass           string
-	SMTPTo             string
+	DiscordWebhookURL  string
+	TelegramBotToken   string
+	TelegramChatID     string
 }
 
 func LoadConfig() (*Config, error) {
@@ -85,11 +83,9 @@ func LoadConfig() (*Config, error) {
 		RefreshTokenExpiry: refreshTokenExpiry,
 		ClientURL:          clientURL,
 		GeminiAPIKey:       geminiAPIKey,
-		SMTPHost:           getEnv("SMTP_HOST", "smtp.gmail.com"),
-		SMTPPort:           getEnv("SMTP_PORT", "587"),
-		SMTPUser:           getEnv("SMTP_USER", ""),
-		SMTPPass:           getEnv("SMTP_PASS", ""),
-		SMTPTo:             getEnv("SMTP_TO", "ysfalbayrak02@gmail.com"),
+		DiscordWebhookURL:  getEnv("DISCORD_WEBHOOK_URL", ""),
+		TelegramBotToken:   getEnv("TELEGRAM_BOT_TOKEN", ""),
+		TelegramChatID:     getEnv("TELEGRAM_CHAT_ID", ""),
 	}, nil
 }
 

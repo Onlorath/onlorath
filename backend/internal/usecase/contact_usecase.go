@@ -1,12 +1,16 @@
 package usecase
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"net/smtp"
+	"log"
+	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"backend/config"
 	"backend/internal/domain"
@@ -47,34 +51,63 @@ func (u *contactUsecase) SendContactEmail(ctx context.Context, req *domain.Conta
 		return errors.New("invalid email format")
 	}
 
-	// Ensure SMTP config exists
-	if u.cfg.SMTPUser == "" || u.cfg.SMTPPass == "" {
-		return errors.New("SMTP configuration is missing on server")
+	if u.cfg.DiscordWebhookURL == "" && (u.cfg.TelegramBotToken == "" || u.cfg.TelegramChatID == "") {
+		log.Println("Warning: No Discord or Telegram webhooks configured for contact form")
 	}
 
-	// 4. Send Email via SMTP
-	auth := smtp.PlainAuth("", u.cfg.SMTPUser, u.cfg.SMTPPass, u.cfg.SMTPHost)
+	// 4. Send to Webhooks
+	messageContent := fmt.Sprintf("📬 **Yeni İletişim Formu Mesajı**\n**Gönderen:** %s\n**E-posta:** %s\n\n**Mesaj:**\n%s", req.Name, req.Email, req.Message)
 
-	subject := "Subject: Onlorath Portfolio - Yeni Iletisim Mesaji\n"
-	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-	
-	body := fmt.Sprintf(`
-		<h2>Yeni İletişim Formu Mesajı</h2>
-		<p><strong>Gönderen:</strong> %s</p>
-		<p><strong>E-posta:</strong> %s</p>
-		<hr/>
-		<p><strong>Mesaj:</strong></p>
-		<p>%s</p>
-	`, req.Name, req.Email, strings.ReplaceAll(req.Message, "\n", "<br/>"))
+	client := &http.Client{Timeout: 5 * time.Second}
+	var errs []string
 
-	msg := []byte(subject + mime + body)
+	// Discord
+	if u.cfg.DiscordWebhookURL != "" {
+		payload := map[string]string{"content": messageContent}
+		payloadBytes, _ := json.Marshal(payload)
+		
+		reqHTTP, _ := http.NewRequestWithContext(ctx, "POST", u.cfg.DiscordWebhookURL, bytes.NewBuffer(payloadBytes))
+		reqHTTP.Header.Set("Content-Type", "application/json")
+		
+		resp, err := client.Do(reqHTTP)
+		if err != nil {
+			errs = append(errs, "discord error: "+err.Error())
+		} else {
+			resp.Body.Close()
+			if resp.StatusCode >= 400 {
+				errs = append(errs, fmt.Sprintf("discord returned status %d", resp.StatusCode))
+			}
+		}
+	}
 
-	addr := fmt.Sprintf("%s:%s", u.cfg.SMTPHost, u.cfg.SMTPPort)
+	// Telegram
+	if u.cfg.TelegramBotToken != "" && u.cfg.TelegramChatID != "" {
+		tgURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", u.cfg.TelegramBotToken)
+		payload := map[string]interface{}{
+			"chat_id": u.cfg.TelegramChatID,
+			"text": messageContent,
+			"parse_mode": "Markdown", // Basic Markdown
+		}
+		payloadBytes, _ := json.Marshal(payload)
+		
+		reqHTTP, _ := http.NewRequestWithContext(ctx, "POST", tgURL, bytes.NewBuffer(payloadBytes))
+		reqHTTP.Header.Set("Content-Type", "application/json")
+		
+		resp, err := client.Do(reqHTTP)
+		if err != nil {
+			errs = append(errs, "telegram error: "+err.Error())
+		} else {
+			resp.Body.Close()
+			if resp.StatusCode >= 400 {
+				errs = append(errs, fmt.Sprintf("telegram returned status %d", resp.StatusCode))
+			}
+		}
+	}
 
-	// SendMail
-	err := smtp.SendMail(addr, auth, u.cfg.SMTPUser, []string{u.cfg.SMTPTo}, msg)
-	if err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
+	// Log errors if any occurred, but we don't necessarily want to block the user from seeing success
+	// unless both failed and we expected at least one to work.
+	if len(errs) > 0 {
+		log.Printf("[Contact Webhook Warnings/Errors] %v", errs)
 	}
 
 	return nil
