@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import ProjectForm from '../../../../components/ProjectForm';
+import ProjectForm from '@/features/projects/components/ProjectForm';
 
 export default function NewProjectPage() {
   return (

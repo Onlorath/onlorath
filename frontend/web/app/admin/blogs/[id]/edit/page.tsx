@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { adminBlogAPI, Blog } from '../../../../../lib/api';
-import BlogForm from '../../../../../components/BlogForm';
+import { adminBlogAPI } from '@/services';
+import { Blog } from '@/types';
+import BlogForm from '@/features/blog/components/BlogForm';
 import { Loader2 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 

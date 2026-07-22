@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { adminProjectAPI, Project } from '../../../../../lib/api';
-import ProjectForm from '../../../../../components/ProjectForm';
+import { adminProjectAPI } from '@/services';
+import { Project } from '@/types';
+import ProjectForm from '@/features/projects/components/ProjectForm';
 import { Loader2 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 

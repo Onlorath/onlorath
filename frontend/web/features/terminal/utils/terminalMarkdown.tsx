@@ -45,14 +45,9 @@ export function parseTerminalMarkdown(content: string): ReactNode[] {
 }
 
 function parseInlineMarkdown(text: string, getNextKey: () => string): ReactNode[] {
-  // We'll process inline markdown elements recursively or sequentially
-  // inline code (`) -> markdown links ([text](url)) -> bold (**) -> italic (*) -> bare URLs
-  
-  // We represent tokens as either plain strings or React elements.
   type Token = { type: 'text' | 'react'; content: ReactNode };
   let tokens: Token[] = [{ type: 'text', content: text }];
 
-  // Helper function to map text tokens using a regex rule
   const applyRegex = (
     regex: RegExp,
     replacer: (match: string[], key: string) => ReactNode
@@ -68,7 +63,7 @@ function parseInlineMarkdown(text: string, getNextKey: () => string): ReactNode[
       const str = token.content as string;
       let lastIdx = 0;
       let m;
-      regex.lastIndex = 0; // reset regex state
+      regex.lastIndex = 0;
 
       while ((m = regex.exec(str)) !== null) {
         const before = str.substring(lastIdx, m.index);
@@ -91,14 +86,12 @@ function parseInlineMarkdown(text: string, getNextKey: () => string): ReactNode[
     tokens = nextTokens;
   };
 
-  // 1. Inline code: `code`
   applyRegex(/`([^`]+)`/g, (m, k) => (
     <span key={`code-${k}`} className="bg-slate-900 px-1.5 py-0.5 rounded text-cyan-300 font-mono text-[11px] border border-white/5">
       {m[1]}
     </span>
   ));
 
-  // 2. Markdown links: [link text](url)
   applyRegex(/\[([^\]]+)\]\(([^)]+)\)/g, (m, k) => {
     const isInternal = m[2].startsWith('/');
     return (
@@ -114,21 +107,18 @@ function parseInlineMarkdown(text: string, getNextKey: () => string): ReactNode[
     );
   });
 
-  // 3. Bold: **bold**
   applyRegex(/\*\*([^*]+)\*\*/g, (m, k) => (
     <span key={`bold-${k}`} className="font-bold text-white">
       {m[1]}
     </span>
   ));
 
-  // 4. Italic: *italic* (avoiding double stars)
   applyRegex(/\*([^*]+)\*/g, (m, k) => (
     <span key={`italic-${k}`} className="italic text-slate-200">
       {m[1]}
     </span>
   ));
 
-  // 5. Bare URLs: https://... or http://...
   applyRegex(/(https?:\/\/[^\s<]+)/g, (m, k) => (
     <a
       key={`url-${k}`}

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { adminBlogAPI, Blog } from '../../../lib/api';
+import { adminBlogAPI } from '@/services';
+import { Blog } from '@/types';
 import { Plus, Edit2, Trash2, Loader2, FileText, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
 

@@ -1,35 +1,34 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { adminProjectAPI, uploadAPI, Project, ProjectImage } from '../lib/api';
+import { adminBlogAPI, uploadAPI } from '@/services';
+import { Blog, BlogImage } from '@/types';
 import { useRouter } from 'next/navigation';
 import { Upload, X, Loader2, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 
-interface ProjectFormProps {
-  initialData?: Project;
+interface BlogFormProps {
+  initialData?: Blog;
   isEdit?: boolean;
 }
 
-export default function ProjectForm({ initialData, isEdit = false }: ProjectFormProps) {
+export default function BlogForm({ initialData, isEdit = false }: BlogFormProps) {
   const router = useRouter();
   const [title, setTitle] = useState(initialData?.title || '');
-  const [description, setDescription] = useState(initialData?.description || '');
-  const [techInput, setTechInput] = useState(initialData?.tech ? initialData.tech.join(', ') : '');
-  const [status, setStatus] = useState(initialData?.status || 'In Development');
+  const [content, setContent] = useState(initialData?.content || '');
+  const [published, setPublished] = useState(initialData?.published || false);
   const [coverImage, setCoverImage] = useState(initialData?.cover_image || '');
-  const [sortOrder, setSortOrder] = useState(initialData?.sort_order || 0);
-  const [gallery, setGallery] = useState<ProjectImage[]>([]);
-
+  const [gallery, setGallery] = useState<BlogImage[]>([]);
+  
   const [saving, setSaving] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
 
   useEffect(() => {
     if (isEdit && initialData) {
-      adminProjectAPI.listImages(initialData.id)
+      adminBlogAPI.listImages(initialData.id)
         .then((res) => setGallery(res.data || []))
-        .catch((err) => console.error('Failed to load project gallery:', err));
+        .catch((err) => console.error('Failed to load gallery:', err));
     }
   }, [isEdit, initialData]);
 
@@ -57,9 +56,9 @@ export default function ProjectForm({ initialData, isEdit = false }: ProjectForm
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const uploadRes = await uploadAPI.upload(file);
-        const imgRes = await adminProjectAPI.addImage(initialData.id, {
+        const imgRes = await adminBlogAPI.addImage(initialData.id, {
           url: uploadRes.data.url,
-          alt_text: title + ' galeri görseli',
+          alt_text: title + ' galeri resmi',
         });
         setGallery((prev) => [...prev, imgRes.data]);
       }
@@ -72,7 +71,7 @@ export default function ProjectForm({ initialData, isEdit = false }: ProjectForm
 
   const handleDeleteImage = async (id: string) => {
     try {
-      await adminProjectAPI.deleteImage(id);
+      await adminBlogAPI.deleteImage(id);
       setGallery(gallery.filter((img) => img.id !== id));
     } catch (err) {
       alert('Resim silinemedi.');
@@ -81,39 +80,29 @@ export default function ProjectForm({ initialData, isEdit = false }: ProjectForm
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return alert('Proje başlığı zorunludur.');
-
-    // Parse tech tags
-    const techArray = techInput
-      .split(',')
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0);
+    if (!title.trim()) return alert('Başlık zorunludur.');
 
     setSaving(true);
     try {
       if (isEdit && initialData) {
-        await adminProjectAPI.update(initialData.id, {
+        await adminBlogAPI.update(initialData.id, {
           title,
-          description,
-          tech: techArray,
-          status,
+          content,
           cover_image: coverImage,
-          sort_order: sortOrder,
+          published,
         });
-        router.push('/admin/projects');
+        router.push('/admin/blogs');
       } else {
-        const res = await adminProjectAPI.create({
+        const res = await adminBlogAPI.create({
           title,
-          description,
-          tech: techArray,
-          status,
+          content,
           cover_image: coverImage,
-          sort_order: sortOrder,
+          published,
         });
-        router.push(`/admin/projects/${res.data.id}/edit`);
+        router.push(`/admin/blogs/${res.data.id}/edit`);
       }
     } catch (err) {
-      alert('Proje kaydedilirken hata oluştu.');
+      alert('Kaydedilirken hata oluştu.');
     } finally {
       setSaving(false);
     }
@@ -123,15 +112,15 @@ export default function ProjectForm({ initialData, isEdit = false }: ProjectForm
     <form onSubmit={handleSave} className="space-y-6 font-sans">
       <div className="flex justify-between items-center">
         <Link
-          href="/admin/projects"
-          className="inline-flex items-center gap-1.5 text-xs font-mono text-slate-500 hover:text-fuchsia-400 transition-colors"
+          href="/admin/blogs"
+          className="inline-flex items-center gap-1.5 text-xs font-mono text-slate-500 hover:text-cyan-400 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> Geri Dön
         </Link>
         <button
           type="submit"
           disabled={saving}
-          className="px-6 py-2.5 rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-semibold text-sm flex items-center gap-2 transition-all disabled:opacity-50"
+          className="px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-sm flex items-center gap-2 transition-all disabled:opacity-50"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
           Kaydet
@@ -143,33 +132,23 @@ export default function ProjectForm({ initialData, isEdit = false }: ProjectForm
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-slate-900/20 border border-white/5 p-6 rounded-2xl backdrop-blur-md space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Proje / Sistem Adı</label>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Başlık</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Örn: Core API Gateway..."
-                className="w-full bg-slate-950/80 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-500 transition-all"
+                placeholder="Yazı başlığını girin..."
+                className="w-full bg-slate-950/80 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Açıklama</label>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">İçerik (Markdown)</label>
               <textarea
-                rows={10}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Proje detaylarını, sistem mimarisini açıklayın..."
-                className="w-full bg-slate-950/80 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-500 transition-all resize-y"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Teknolojiler (Virgülle Ayırın)</label>
-              <input
-                type="text"
-                value={techInput}
-                onChange={(e) => setTechInput(e.target.value)}
-                placeholder="Go, React, Docker, Kubernetes"
-                className="w-full bg-slate-950/80 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-fuchsia-500 transition-all"
+                rows={15}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="İçerik markdown formatında yazılabilir..."
+                className="w-full bg-slate-950/80 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all resize-y"
               />
             </div>
           </div>
@@ -177,9 +156,10 @@ export default function ProjectForm({ initialData, isEdit = false }: ProjectForm
 
         {/* Sidebar settings */}
         <div className="space-y-6">
+          {/* Cover & Publishing status */}
           <div className="bg-slate-900/20 border border-white/5 p-6 rounded-2xl backdrop-blur-md space-y-5">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Kapak Görseli</label>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Kapak Resmi</label>
               {coverImage ? (
                 <div className="relative rounded-xl overflow-hidden border border-white/10 group mb-3">
                   <img src={coverImage} alt="Kapak" className="w-full h-40 object-cover" />
@@ -195,7 +175,7 @@ export default function ProjectForm({ initialData, isEdit = false }: ProjectForm
                 <label className="flex flex-col items-center justify-center h-40 rounded-xl border border-dashed border-slate-800 bg-slate-950/40 cursor-pointer hover:border-slate-700 transition-all">
                   <div className="text-center space-y-1">
                     {uploadingCover ? (
-                      <Loader2 className="w-8 h-8 animate-spin text-fuchsia-400 mx-auto" />
+                      <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mx-auto" />
                     ) : (
                       <>
                         <Upload className="w-8 h-8 text-slate-650 mx-auto" />
@@ -208,38 +188,28 @@ export default function ProjectForm({ initialData, isEdit = false }: ProjectForm
               )}
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Sistem Durumu (Status)</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 text-slate-300 text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-fuchsia-500 cursor-pointer"
-              >
-                <option value="In Orbit">In Orbit (Yayında / Aktif)</option>
-                <option value="Landed">Landed (Tamamlandı / Stabil)</option>
-                <option value="In Development">In Development (Geliştirme Aşamasında)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Sıralama Önceliği (Sort Order)</label>
+            <div className="flex items-center gap-3 pt-2">
               <input
-                type="number"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(parseInt(e.target.value) || 0)}
-                className="w-full bg-slate-950 border border-slate-800 text-slate-350 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-fuchsia-500 font-mono"
+                type="checkbox"
+                id="published"
+                checked={published}
+                onChange={(e) => setPublished(e.target.checked)}
+                className="w-4 h-4 bg-slate-950 border border-slate-800 rounded text-cyan-500 focus:ring-0 cursor-pointer"
               />
+              <label htmlFor="published" className="text-sm font-semibold text-slate-350 cursor-pointer select-none">
+                Yayınla (Herkese Açık)
+              </label>
             </div>
           </div>
 
-          {/* Project Gallery */}
+          {/* Gallery management (Only in edit mode) */}
           {isEdit && (
             <div className="bg-slate-900/20 border border-white/5 p-6 rounded-2xl backdrop-blur-md space-y-4">
               <div className="flex justify-between items-center">
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Sistem Görselleri</label>
-                <label className="cursor-pointer text-xs font-semibold text-fuchsia-400 hover:text-fuchsia-300 transition-all">
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Görsel Galerisi</label>
+                <label className="cursor-pointer text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-all">
                   {uploadingGallery ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-fuchsia-400" />
+                    <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
                   ) : (
                     'Ekle +'
                   )}
@@ -256,7 +226,7 @@ export default function ProjectForm({ initialData, isEdit = false }: ProjectForm
                 <div className="grid grid-cols-2 gap-2">
                   {(gallery || []).map((img) => (
                     <div key={img.id} className="relative group rounded-lg overflow-hidden border border-white/5">
-                      <img src={img.url} alt="Proje görseli" className="w-full h-20 object-cover" />
+                      <img src={img.url} alt="Galeri resmi" className="w-full h-20 object-cover" />
                       <button
                         type="button"
                         onClick={() => handleDeleteImage(img.id)}

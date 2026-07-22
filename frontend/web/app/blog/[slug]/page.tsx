@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Loader2, FileText, Calendar } from 'lucide-react';
-import { blogAPI, Blog } from '../../../lib/api';
-import { parseTerminalMarkdown } from '../../../lib/terminalMarkdown';
+import { blogAPI } from '@/services';
+import { Blog } from '@/types';
+import { parseTerminalMarkdown } from '@/features/terminal/utils/terminalMarkdown';
 import { useParams } from 'next/navigation';
 
 const Github = ({ className }: { className?: string }) => (

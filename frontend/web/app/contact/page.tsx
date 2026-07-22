@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Starfield } from '../../components/Starfield';
-import ContactForm from '../../components/ContactForm';
+import ContactForm from '@/features/contact/components/ContactForm';
 
 export default function ContactPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

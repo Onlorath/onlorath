@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { adminBlogAPI, adminProjectAPI } from '../../lib/api';
+import { adminBlogAPI, adminProjectAPI } from '@/services';
 import { FileText, FolderKanban, Plus, ExternalLink, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 

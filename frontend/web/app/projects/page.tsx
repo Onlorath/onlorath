@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Starfield } from '../../components/Starfield';
 import { Loader2 } from 'lucide-react';
-import { projectAPI, Project } from '../../lib/api';
+import { projectAPI } from '@/services';
+import { Project } from '@/types';
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);

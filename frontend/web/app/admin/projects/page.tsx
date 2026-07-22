@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { adminProjectAPI, Project } from '../../../lib/api';
+import { adminProjectAPI } from '@/services';
+import { Project } from '@/types';
 import { Plus, Edit2, Trash2, Loader2, FolderKanban, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 

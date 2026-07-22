@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import BlogForm from '../../../../components/BlogForm';
+import BlogForm from '@/features/blog/components/BlogForm';
 
 export default function NewBlogPage() {
   return (

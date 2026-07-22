@@ -6,8 +6,8 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 
-const TerminalWidget = dynamic(() => import('../components/TerminalWidget'), { ssr: false });
-const Rocket3D = dynamic(() => import('../components/Rocket3D'), { ssr: false });
+const TerminalWidget = dynamic(() => import('@/features/terminal/components/TerminalWidget'), { ssr: false });
+const Rocket3D = dynamic(() => import('@/features/3d-graphics/components/Rocket3D'), { ssr: false });
 const Starfield = dynamic(() => import('../components/Starfield').then(mod => mod.Starfield), { ssr: false });
 
 const Typewriter = ({ text, speed = 30 }: { text: string; speed?: number }) => {
@@ -47,7 +47,7 @@ const translations = {
     connecting: "Sistem başlatılıyor...",
     online: "Sistemler çevrimiçi. Yörüngeye giriliyor...",
     titlePart1: "Yazılım Geliştirici",
-    titlePart2: "& Sistem Mimarı",
+    titlePart2: "Sistem Mimarı",
     aboutText: "Yüksek performanslı, ölçeklenebilir sistemler inşa ediyorum. Karmaşık mimarileri optimize ediyor ve derinlemesine teknik çözümler üretiyorum. Hoş geldiniz, orbitime girdiniz.",
     viewSystems: "Sistemleri İncele",
     viewCV: "CV'mi Görüntüle",

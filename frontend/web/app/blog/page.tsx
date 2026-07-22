@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Starfield } from '../../components/Starfield';
 import { Loader2 } from 'lucide-react';
-import { blogAPI, Blog } from '../../lib/api';
+import { blogAPI } from '@/services';
+import { Blog } from '@/types';
 
 export default function BlogListPage() {
   const [blogs, setBlogs] = useState<Blog[]>([]);

@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal as TerminalIcon, Play, AlertCircle, Loader2 } from 'lucide-react';
-import { chatAPI } from '../lib/api';
-import { parseTerminalMarkdown } from '../lib/terminalMarkdown';
+import { chatAPI } from '@/services';
+import { parseTerminalMarkdown } from '../utils/terminalMarkdown';
 
 interface TerminalLine {
   text: string;
@@ -241,7 +241,7 @@ export default function TerminalWidget({ lang = 'tr' }: TerminalWidgetProps) {
             { text: 'Mevcut Sistem Komutları:', type: 'success' },
             { text: '  neofetch   - Sistem özelliklerini ve profil logosunu gösterir', type: 'output' },
             { text: '  about      - onlorath hakkında kısa biyografi', type: 'output' },
-            { text: '  skills     - Aktif teknoloji yığınını listeler', type: 'output' },
+            { text: '  skills     - Aktif teknoloji yığını listeler', type: 'output' },
             { text: '  projects   - Mühendislik projelerini gösterir', type: 'output' },
             { text: '  contact    - İletişim linklerini getirir', type: 'output' },
             { text: '  new        - AI sohbet oturumunu sıfırlar', type: 'output' },
@@ -334,7 +334,6 @@ export default function TerminalWidget({ lang = 'tr' }: TerminalWidgetProps) {
         ]);
         break;
       default:
-        // Any other text input is treated directly as an AI chat message
         sendChatMessage(cmd, currentHistory);
         break;
     }
@@ -360,7 +359,6 @@ export default function TerminalWidget({ lang = 'tr' }: TerminalWidgetProps) {
 
       {/* Terminal Body */}
       <div className="p-6 md:p-8 bg-surface-container-lowest/50 font-code-sm text-code-sm text-on-surface-variant min-h-[320px] max-h-[480px] flex flex-col relative overflow-hidden">
-        {/* Subtle noise texture overlay */}
         <div 
           className="absolute inset-0 opacity-[0.03] pointer-events-none" 
           style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E')" }} 
