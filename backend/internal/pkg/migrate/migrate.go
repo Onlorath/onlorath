@@ -12,24 +12,25 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// advisoryLockKey serializes concurrent API instances running migrations.
-const advisoryLockKey = 727274
-
 // Run applies every *.sql file in fsys whose name is not yet recorded in
-// schema_migrations, in lexical order, each inside its own transaction.
+// schema_migrations, in lexical order, all inside one transaction: either every
+// pending migration is applied or none is.
+//
+// The lock is transaction-scoped (pg_advisory_xact_lock) so it also works through
+// a transaction-mode pooler such as Supabase's port 6543, where session-level locks
+// can be taken and released on different server connections.
 func Run(ctx context.Context, db *sqlx.DB, fsys fs.FS) error {
-	conn, err := db.Connx(ctx)
+	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer tx.Rollback()
 
-	if _, err := conn.ExecContext(ctx, `SELECT pg_advisory_lock($1)`, advisoryLockKey); err != nil {
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(727274)`); err != nil {
 		return fmt.Errorf("acquire migration lock: %w", err)
 	}
-	defer conn.ExecContext(context.Background(), `SELECT pg_advisory_unlock($1)`, advisoryLockKey)
 
-	if _, err := conn.ExecContext(ctx, `
+	if _, err := tx.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			version VARCHAR(255) PRIMARY KEY,
 			applied_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -38,7 +39,7 @@ func Run(ctx context.Context, db *sqlx.DB, fsys fs.FS) error {
 	}
 
 	var applied []string
-	if err := conn.SelectContext(ctx, &applied, `SELECT version FROM schema_migrations`); err != nil {
+	if err := tx.SelectContext(ctx, &applied, `SELECT version FROM schema_migrations`); err != nil {
 		return fmt.Errorf("read schema_migrations: %w", err)
 	}
 
@@ -52,22 +53,18 @@ func Run(ctx context.Context, db *sqlx.DB, fsys fs.FS) error {
 		if err != nil {
 			return err
 		}
-
-		tx, err := conn.BeginTxx(ctx, nil)
-		if err != nil {
-			return err
-		}
 		if _, err := tx.ExecContext(ctx, string(body)); err != nil {
-			tx.Rollback()
 			return fmt.Errorf("migration %s: %w", name, err)
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations (version) VALUES ($1)`, name); err != nil {
-			tx.Rollback()
 			return fmt.Errorf("record migration %s: %w", name, err)
 		}
-		if err := tx.Commit(); err != nil {
-			return fmt.Errorf("commit migration %s: %w", name, err)
-		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit migrations: %w", err)
+	}
+	for _, name := range names {
 		log.Printf("Applied migration %s", name)
 	}
 	return nil

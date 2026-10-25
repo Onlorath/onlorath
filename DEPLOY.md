@@ -48,7 +48,7 @@ Environment değişkenleri:
 | Değişken | Değer |
 |---|---|
 | `APP_ENV` | `production` (JWT anahtarları eksik/kısaysa API açılmayı reddeder) |
-| `DATABASE_URL` | 1.2'deki adres |
+| `DATABASE_URL` | 1.2'deki adres. Yerine ayrı `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE=require` de kullanılabilir; pooler'ın 5432 (session) ve 6543 (transaction) portları ikisi de çalışır |
 | `DB_MAX_OPEN_CONNS` | `5` (ücretsiz pooler bağlantı sınırı için) |
 | `JWT_SECRET` | 48+ karakter rastgele (aşağıdaki komut) |
 | `JWT_REFRESH_SECRET` | 48+ karakter rastgele, `JWT_SECRET`'tan **farklı** |
