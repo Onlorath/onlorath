@@ -1,27 +1,29 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"backend/config"
 	"backend/internal/pkg/httputil"
+	"backend/internal/pkg/storage"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
 type UploadHandler struct {
-	cfg *config.Config
+	cfg   *config.Config
+	store storage.Store
 }
 
-func NewUploadHandler(cfg *config.Config) *UploadHandler {
-	return &UploadHandler{cfg: cfg}
+func NewUploadHandler(cfg *config.Config, store storage.Store) *UploadHandler {
+	return &UploadHandler{cfg: cfg, store: store}
 }
 
 // allowedUploads maps each accepted extension to the MIME prefix that
@@ -73,28 +75,12 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filename := uuid.New().String() + ext
-	if err := os.MkdirAll(h.cfg.UploadDir, 0755); err != nil {
-		log.Printf("[upload] mkdir: %v", err)
-		httputil.RespondWithError(w, http.StatusInternalServerError, "Failed to save file")
-		return
-	}
-
-	dst, err := os.Create(filepath.Join(h.cfg.UploadDir, filename))
+	url, err := h.store.Save(r.Context(), uuid.New().String()+ext, wantMime, file)
 	if err != nil {
-		log.Printf("[upload] create: %v", err)
+		log.Printf("[upload] save: %v", err)
 		httputil.RespondWithError(w, http.StatusInternalServerError, "Failed to save file")
 		return
 	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, file); err != nil {
-		log.Printf("[upload] copy: %v", err)
-		httputil.RespondWithError(w, http.StatusInternalServerError, "Failed to save file")
-		return
-	}
-
-	url := fmt.Sprintf("/api/v1/uploads/%s", filename)
 	httputil.RespondWithJSON(w, http.StatusCreated, map[string]string{"url": url})
 }
 
@@ -119,11 +105,12 @@ func (h *UploadHandler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := os.Remove(filepath.Join(h.cfg.UploadDir, name)); err != nil {
-		if os.IsNotExist(err) {
+	if err := h.store.Delete(r.Context(), name); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
 			httputil.RespondWithError(w, http.StatusNotFound, "File not found")
 			return
 		}
+		log.Printf("[upload] delete: %v", err)
 		httputil.RespondWithError(w, http.StatusInternalServerError, "Failed to delete file")
 		return
 	}

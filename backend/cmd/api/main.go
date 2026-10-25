@@ -15,6 +15,7 @@ import (
 	"backend/internal/delivery/http/handler"
 	"backend/internal/delivery/http/middleware"
 	"backend/internal/pkg/migrate"
+	"backend/internal/pkg/storage"
 	"backend/internal/repository/postgres"
 	"backend/internal/usecase"
 	"backend/migrations"
@@ -33,11 +34,8 @@ func main() {
 	}
 
 	// 2. Initialize Database Connection
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode)
-
-	log.Printf("Connecting to database at %s:%s...", cfg.DBHost, cfg.DBPort)
-	db, err := sqlx.Connect("postgres", dsn)
+	log.Printf("Connecting to database at %s...", cfg.DBTarget())
+	db, err := sqlx.Connect("postgres", cfg.DSN())
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -48,8 +46,8 @@ func main() {
 	}()
 
 	// Configure DB connection pool settings
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(5)
+	db.SetMaxOpenConns(cfg.DBMaxOpenConns)
+	db.SetMaxIdleConns(min(5, cfg.DBMaxOpenConns))
 	db.SetConnMaxLifetime(5 * time.Minute)
 	db.SetConnMaxIdleTime(3 * time.Minute)
 
@@ -87,7 +85,12 @@ func main() {
 	contactHandler := handler.NewContactHandler(contactUseCase)
 
 	siteHandler := handler.NewSiteHandler(siteUseCase, projectUseCase, blogUseCase, contactUseCase)
-	uploadHandler := handler.NewUploadHandler(cfg)
+	var store storage.Store = storage.Local{Dir: cfg.UploadDir}
+	if cfg.SupabaseURL != "" && cfg.SupabaseServiceKey != "" {
+		store = storage.NewSupabase(cfg.SupabaseURL, cfg.SupabaseServiceKey, cfg.SupabaseBucket)
+		log.Printf("Uploads go to Supabase Storage bucket %q", cfg.SupabaseBucket)
+	}
+	uploadHandler := handler.NewUploadHandler(cfg, store)
 
 	authM := middleware.NewAuthMiddleware(cfg)
 
@@ -110,6 +113,7 @@ func main() {
 		Site:    siteHandler,
 		Upload:  uploadHandler,
 		Contact: contactHandler,
+		Health:  handler.NewHealthHandler(db),
 	}, authM)
 
 	// 7. Configure and Start HTTP Server

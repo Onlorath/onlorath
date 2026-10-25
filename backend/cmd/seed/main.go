@@ -9,7 +9,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"time"
 
@@ -35,9 +34,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode)
-	db, err := sqlx.Connect("postgres", dsn)
+	log.Printf("Seeding %s", cfg.DBTarget())
+	db, err := sqlx.Connect("postgres", cfg.DSN())
 	if err != nil {
 		log.Fatalf("connect: %v", err)
 	}

@@ -12,8 +12,16 @@ interface Props {
   params: Promise<{ locale: string }>;
 }
 
-// Content is edited live in /admin, so every page renders per request (no build-time prerender).
-export const dynamic = 'force-dynamic';
+// Pages render on first request and are cached for 60s (ISR); nothing is prerendered at
+// build time, so deploys don't depend on the API being awake. maxDuration lets a render
+// wait out a sleeping free-tier API.
+export const revalidate = 60;
+export const maxDuration = 60;
+
+// Empty list: opt into ISR without prerendering any locale at build time.
+export function generateStaticParams() {
+  return [];
+}
 
 export const viewport: Viewport = { themeColor: '#f8f5ef' };
 

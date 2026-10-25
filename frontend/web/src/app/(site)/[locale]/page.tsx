@@ -8,7 +8,8 @@ import { getDictionary } from '@/i18n/dictionaries';
 import { getSite } from '@/lib/api/server';
 import { isLocale } from '@/lib/i18n';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
+export const maxDuration = 60;
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

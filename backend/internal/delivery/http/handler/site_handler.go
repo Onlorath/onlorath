@@ -42,7 +42,7 @@ func (h *SiteHandler) GetSite(w http.ResponseWriter, r *http.Request) {
 // GET /api/v1/cv
 func (h *SiteHandler) ServeCV(w http.ResponseWriter, r *http.Request) {
 	profile, err := h.siteUseCase.GetProfile(r.Context())
-	if err == nil && strings.HasPrefix(profile.CVURL, "/api/v1/uploads/") {
+	if err == nil && (strings.HasPrefix(profile.CVURL, "/api/v1/uploads/") || strings.HasPrefix(profile.CVURL, "https://")) {
 		http.Redirect(w, r, profile.CVURL, http.StatusFound)
 		return
 	}

@@ -20,6 +20,7 @@ type Handlers struct {
 	Site    *handler.SiteHandler
 	Upload  *handler.UploadHandler
 	Contact *handler.ContactHandler
+	Health  *handler.HealthHandler
 }
 
 // NewRouter initializes the router and registers routes.
@@ -48,6 +49,9 @@ func NewRouter(cfg *config.Config, h Handlers, authM *authMiddleware.AuthMiddlew
 			next.ServeHTTP(w, r)
 		})
 	})
+
+	r.Get("/healthz", h.Health.Health)
+	r.Head("/healthz", h.Health.Health)
 
 	// API Version 1 Group
 	r.Route("/api/v1", func(r chi.Router) {

@@ -11,7 +11,8 @@ import { formatDate } from '@/lib/format';
 import { isLocale, pick } from '@/lib/i18n';
 import styles from '../blog.module.css';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
+export const maxDuration = 60;
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
 

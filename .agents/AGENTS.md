@@ -60,7 +60,9 @@ Every visible text, project, timeline item, skill and link lives in Postgres and
 - **Schema:** numbered files in `backend/migrations/`, applied once each by `internal/pkg/migrate` and tracked in `schema_migrations`.
   - The runner takes an advisory lock, then applies each file in its own transaction.
   - To change the schema, **add a new file** (`0003_….sql`); never edit an applied one.
-- **Credentials:** in `backend/.env`. Never commit them.
+- **Credentials:** in `backend/.env`. Never commit them. `DATABASE_URL` (e.g. the Supabase session pooler URI) overrides the `DB_*` fields.
+- **Supabase:** `0004_enable_rls.sql` enables RLS on every table so Supabase's REST API can't read them; the API connects as the owner and is unaffected.
+- **Deployment:** see `DEPLOY.md` (Supabase + Render + Vercel).
 - **Localized columns:** JSONB `{"tr": "...", "en": "..."}`.
 
 | Table | Purpose |
@@ -118,6 +120,8 @@ Every visible text, project, timeline item, skill and link lives in Postgres and
 | POST (multipart `file`), DELETE `/{file}` | `uploads` |
 
 - **Uploads:** jpg/png/webp/gif/pdf/mp4/webm. The file content is sniffed and must match the extension. Size limit is `UPLOAD_MAX_MB` (default 25).
+  - Stored through `internal/pkg/storage`: Supabase Storage when `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` are set (returns the public object URL), otherwise local disk under `UPLOAD_DIR` (served at `/api/v1/uploads/{file}`).
+- **Health:** `GET /healthz` runs `SELECT 1` (200 `ok` / 503); used by Render's health check and the uptime pinger.
 - **Writes are full replace (PUT).** An empty `slug` is generated from the Turkish title (`pkg/slug`).
 - **Errors:**
   - Validation → 400, not found or malformed id → 404, duplicate slug → 409.
@@ -165,7 +169,7 @@ Every visible text, project, timeline item, skill and link lives in Postgres and
 
 - **Design source:** the Stitch "Pastel Bento" export (`code.html`, `DESIGN.md`, `screen.png`). Tokens are in `globals.css`.
   - Set `.pastel-<color>` on an element to get `--c-soft`, `--c-strong` and `--c-ink` for that color.
-- **Rendering:** public pages are Server Components (`cache: 'no-store'`), so admin edits show up immediately.
+- **Rendering:** public pages are Server Components with ISR (`revalidate = 60`, rendered on first request, never at build). Admin edits show up within 60s, and if the API is asleep or failing, the last good render keeps being served.
   - Interactive pieces are client components: filters/accordion, BalloonGame, ContactForm, ChatWidget, LanguageSwitch.
 - **Project preview area (`ProjectMedia`):**
   - `builtin` maps to a registry keyed by `media.key`; currently only `balloons` → `BalloonGame`.
