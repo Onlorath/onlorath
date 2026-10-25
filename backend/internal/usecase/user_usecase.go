@@ -22,8 +22,40 @@ func NewUserUseCase(userRepo domain.UserRepository, cfg *config.Config) domain.U
 	}
 }
 
+// EnsureAdmin creates the configured admin account, or promotes it to admin if it
+// already exists. The password of an existing account is left unchanged.
+func (u *userUseCase) EnsureAdmin(ctx context.Context, email string, password string) error {
+	user, err := u.userRepo.GetByEmail(ctx, email)
+	if err == nil {
+		if user.Role == domain.RoleAdmin {
+			return nil
+		}
+		return u.userRepo.UpdateRole(ctx, user.ID, domain.RoleAdmin)
+	}
+	if err != domain.ErrUserNotFound {
+		return err
+	}
+
+	req := &domain.RegisterRequest{Email: email, Password: password}
+	if err := req.Validate(); err != nil {
+		return err
+	}
+	hashedPassword, err := bcrypt.HashPassword(password)
+	if err != nil {
+		return err
+	}
+	return u.userRepo.Create(ctx, &domain.User{
+		Email:        email,
+		PasswordHash: hashedPassword,
+		Role:         domain.RoleAdmin,
+	})
+}
+
 // Register validates user input, hashes the password, and creates a user record.
 func (u *userUseCase) Register(ctx context.Context, req *domain.RegisterRequest) (*domain.User, error) {
+	if !u.cfg.AllowRegistration {
+		return nil, domain.ErrRegistrationDisabled
+	}
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
@@ -116,4 +148,3 @@ func (u *userUseCase) Refresh(ctx context.Context, refreshToken string) (string,
 
 	return accessToken, nil
 }
-

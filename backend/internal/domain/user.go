@@ -84,9 +84,16 @@ type UserRepository interface {
 	Create(ctx context.Context, user *User) error
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	GetByID(ctx context.Context, id string) (*User, error)
+	UpdateRole(ctx context.Context, id string, role string) error
 }
 
+const RoleAdmin = "admin"
+
+var ErrRegistrationDisabled = errors.New("registration is disabled")
+
 type UserUseCase interface {
+	// EnsureAdmin creates the account with role admin, or promotes it if it exists.
+	EnsureAdmin(ctx context.Context, email string, password string) error
 	Register(ctx context.Context, req *RegisterRequest) (*User, error)
 	Login(ctx context.Context, req *LoginRequest) (accessToken string, refreshToken string, user *User, err error)
 	Refresh(ctx context.Context, refreshToken string) (string, error)

@@ -8,9 +8,9 @@ services:
       POSTGRES_DB: onlorath_db
     ports:
       - "5432:5432"
+    # The schema is applied by the Go API at startup (backend/migrations).
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - onlorath_network
 

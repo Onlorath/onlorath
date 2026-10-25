@@ -6,8 +6,17 @@ import (
 	"time"
 )
 
-var ErrChatLimitReached = errors.New("Sohbet kotanız dolmuştur. Yusuf ile iletişime geçmek için lütfen iletişim formunu kullanın.")
-var ErrGlobalLimitReached = errors.New("Şu anda yoğunluk var o yüzden kullanılamıyor")
+// Chat errors are stable codes; the frontend translates them for the visitor.
+var (
+	ErrChatLimitReached     = errors.New("chat_quota_exceeded")
+	ErrGlobalLimitReached   = errors.New("chat_system_busy")
+	ErrChatUnavailable      = errors.New("chat_unavailable")
+	ErrChatUpstreamBusy     = errors.New("chat_upstream_busy")
+	ErrConversationNotFound = errors.New("conversation not found")
+	ErrEmptyChatMessage     = errors.New("message cannot be empty")
+	ErrChatMessageTooLong   = errors.New("message is too long")
+	MaxChatMessageLength    = 1000
+)
 
 type Conversation struct {
 	ID        string    `db:"id" json:"id"`
@@ -30,6 +39,7 @@ type SendMessageRequest struct {
 	ConversationID string `json:"conversation_id"` // Empty for new conversation
 	SessionID      string `json:"session_id"`      // Optional session ID for guest chat
 	Message        string `json:"message"`
+	Locale         string `json:"locale"` // Visitor's site language; the reply defaults to it
 }
 
 type ChatResponse struct {

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"sync"
@@ -10,6 +9,7 @@ import (
 	"backend/internal/domain"
 	"backend/internal/pkg/httputil"
 
+	"github.com/go-chi/chi/v5"
 	"golang.org/x/time/rate"
 )
 
@@ -72,17 +72,41 @@ func (h *ContactHandler) SubmitContact(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Decode Request
 	var req domain.ContactRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
 	// 3. Process with Usecase
 	if err := h.contactUsecase.SendContactEmail(r.Context(), &req); err != nil {
 		log.Printf("[Contact Error] %v", err)
-		httputil.RespondWithError(w, http.StatusInternalServerError, "Failed to send message")
+		respondError(w, err)
 		return
 	}
 
-	httputil.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Email sent successfully"})
+	httputil.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Message received"})
+}
+
+// AdminListMessages returns the contact inbox, newest first.
+func (h *ContactHandler) AdminListMessages(w http.ResponseWriter, r *http.Request) {
+	items, err := h.contactUsecase.ListMessages(r.Context())
+	respondList(w, items, err)
+}
+
+// AdminUpdateMessage marks a message read or unread.
+func (h *ContactHandler) AdminUpdateMessage(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Read bool `json:"read"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if err := h.contactUsecase.SetRead(r.Context(), chi.URLParam(r, "id"), req.Read); err != nil {
+		respondError(w, err)
+		return
+	}
+	httputil.RespondWithJSON(w, http.StatusOK, map[string]bool{"read": req.Read})
+}
+
+func (h *ContactHandler) AdminDeleteMessage(w http.ResponseWriter, r *http.Request) {
+	respondDeleteResult(w, h.contactUsecase.DeleteMessage(r.Context(), chi.URLParam(r, "id")))
 }

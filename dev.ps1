@@ -1,10 +1,11 @@
 # Starts the whole local stack with one command: PostgreSQL -> Go API (:8080) -> Next.js (:3000).
 # Usage:  .\dev.ps1            (Ctrl+C stops API + web; Postgres keeps running)
 #         .\dev.ps1 -StopDb    (also stops Postgres on exit, if this script started it)
+#         .\dev.ps1 -Seed      (fill empty tables with the demo content; done automatically for a new native DB)
 #
 # Postgres lookup order: already listening on :5432 -> native install (pg_ctl) -> docker compose.
-# Override native paths with $env:PG_BIN / $env:PG_DATA.
-param([switch]$StopDb)
+# Override native paths with $env:PG_BIN / $env:PG_DATA. The schema is applied by the API (backend/migrations).
+param([switch]$StopDb, [switch]$Seed)
 
 $ErrorActionPreference = 'Stop'
 $Root = $PSScriptRoot
@@ -61,7 +62,7 @@ function Initialize-NativeCluster {
     } finally { Remove-Item $pwFile -Force -ErrorAction SilentlyContinue }
 }
 
-# Creates the app role/database and loads init.sql if the database doesn't exist yet.
+# Creates the app role and database if they don't exist yet; returns $true when it created the database.
 function Initialize-AppDatabase {
     $dbUser = Get-EnvValue $EnvFile 'DB_USER'
     $dbPw = Get-EnvValue $EnvFile 'DB_PASSWORD'
@@ -71,9 +72,9 @@ function Initialize-AppDatabase {
         $env:PGPASSWORD = Get-SuperPassword
         $exists = & $psql -h localhost -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$dbName'"
         if ($LASTEXITCODE -ne 0) { throw 'Cannot connect as postgres superuser (check PG_SUPERUSER_PASSWORD in backend/.env)' }
-        if ($exists -eq '1') { return }
+        if ($exists -eq '1') { return $false }
 
-        Write-Step "Creating database $dbName and loading init.sql"
+        Write-Step "Creating database $dbName"
         $roleExists = & $psql -h localhost -U postgres -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname = '$dbUser'"
         if ($roleExists -ne '1') {
             & $psql -h localhost -U postgres -d postgres -q -v ON_ERROR_STOP=1 -c "CREATE ROLE $dbUser LOGIN PASSWORD '$dbPw';"
@@ -81,13 +82,9 @@ function Initialize-AppDatabase {
         }
         & $psql -h localhost -U postgres -d postgres -q -v ON_ERROR_STOP=1 -c "CREATE DATABASE $dbName OWNER $dbUser ENCODING 'UTF8';"
         if ($LASTEXITCODE -ne 0) { throw 'CREATE DATABASE failed' }
-
-        $env:PGPASSWORD = $dbPw
-        $env:PGOPTIONS = '-c client_min_messages=warning'  # hide init.sql's "trigger does not exist" NOTICEs
-        & $psql -h localhost -U $dbUser -d $dbName -q -v ON_ERROR_STOP=1 -f "$Root\onlorath\infra\init.sql"
-        if ($LASTEXITCODE -ne 0) { throw 'Loading init.sql failed' }
+        return $true
     } finally {
-        Remove-Item Env:PGPASSWORD, Env:PGOPTIONS -ErrorAction SilentlyContinue
+        Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
     }
 }
 
@@ -122,9 +119,9 @@ while (-not (Test-Port 5432)) {
     if ((Get-Date) -gt $deadline) { throw 'PostgreSQL did not come up on :5432 within 30s' }
     Start-Sleep -Milliseconds 500
 }
-# Docker's postgres image runs init.sql itself; for a native install we do it here.
+# Docker's postgres image creates its own role/database; for a native install we do it here.
 if ($startedDb -ne 'docker' -and (Test-Path "$PgBin\psql.exe") -and (Test-Path "$PgData\PG_VERSION")) {
-    Initialize-AppDatabase
+    if (Initialize-AppDatabase) { $Seed = $true }
 }
 
 # --- Dependencies ---
@@ -135,15 +132,32 @@ $go = Resolve-Exe 'go' 'C:\Program Files\Go\bin\go.exe'
 if (-not (Test-Path "$web\node_modules")) {
     Write-Step 'Installing frontend dependencies'
     Push-Location $web
-    try { & npm.cmd ci --no-audit --no-fund --legacy-peer-deps } finally { Pop-Location }
+    try { & npm.cmd ci --no-audit --no-fund } finally { Pop-Location }
     if ($LASTEXITCODE -ne 0) { throw 'npm ci failed' }
+}
+
+# Seed applies the migrations itself and only writes into empty tables.
+if ($Seed) {
+    Write-Step 'Seeding demo content'
+    Push-Location "$Root\backend"
+    try { & $go run ./cmd/seed } finally { Pop-Location }
+    if ($LASTEXITCODE -ne 0) { throw 'seed failed' }
 }
 
 # --- API + web ---
 $procs = @()
 try {
     Write-Step 'Starting Go API on http://localhost:8080'
-    $procs += Start-Process -FilePath $go -ArgumentList 'run', './cmd/api' -WorkingDirectory "$Root\backend" -NoNewWindow -PassThru
+    $api = Start-Process -FilePath $go -ArgumentList 'run', './cmd/api' -WorkingDirectory "$Root\backend" -NoNewWindow -PassThru
+    $procs += $api
+
+    # Wait for the API (go run compiles first) so Next's first server render can reach it.
+    $deadline = (Get-Date).AddMinutes(3)
+    while (-not (Test-Port 8080)) {
+        if ($api.HasExited) { throw 'Go API exited during startup (see output above)' }
+        if ((Get-Date) -gt $deadline) { throw 'Go API did not open :8080 within 3 minutes' }
+        Start-Sleep -Milliseconds 500
+    }
 
     # next is launched through node directly so Ctrl+C doesn't hit npm.cmd's "Terminate batch job?" prompt
     Write-Step 'Starting Next.js on http://localhost:3000'

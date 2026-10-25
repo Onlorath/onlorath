@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"backend/config"
@@ -23,179 +22,77 @@ func NewProjectHandler(projectUseCase domain.ProjectUseCase, cfg *config.Config)
 	}
 }
 
-func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
-	var req domain.CreateProjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	project, err := h.projectUseCase.Create(r.Context(), &req)
-	if err != nil {
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	httputil.RespondWithJSON(w, http.StatusCreated, project)
-}
-
-func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Project ID is required")
-		return
-	}
-
-	var req domain.UpdateProjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	project, err := h.projectUseCase.Update(r.Context(), id, &req)
-	if err != nil {
-		if err == domain.ErrProjectNotFound {
-			httputil.RespondWithError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	httputil.RespondWithJSON(w, http.StatusOK, project)
-}
-
-func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Project ID is required")
-		return
-	}
-
-	err := h.projectUseCase.Delete(r.Context(), id)
-	if err != nil {
-		if err == domain.ErrProjectNotFound {
-			httputil.RespondWithError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	httputil.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
-}
-
-func (h *ProjectHandler) GetProject(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Project ID is required")
-		return
-	}
-
-	project, err := h.projectUseCase.GetByID(r.Context(), id)
-	if err != nil {
-		if err == domain.ErrProjectNotFound {
-			httputil.RespondWithError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	httputil.RespondWithJSON(w, http.StatusOK, project)
-}
-
+// ListProjects returns published projects (public).
 func (h *ProjectHandler) ListProjects(w http.ResponseWriter, r *http.Request) {
-	projects, err := h.projectUseCase.List(r.Context())
+	projects, err := h.projectUseCase.List(r.Context(), true)
 	if err != nil {
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		respondError(w, err)
 		return
 	}
 	httputil.RespondWithJSON(w, http.StatusOK, projects)
 }
 
+// AdminListProjects returns all projects including drafts.
 func (h *ProjectHandler) AdminListProjects(w http.ResponseWriter, r *http.Request) {
-	projects, err := h.projectUseCase.List(r.Context())
+	projects, err := h.projectUseCase.List(r.Context(), false)
 	if err != nil {
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		respondError(w, err)
 		return
 	}
 	httputil.RespondWithJSON(w, http.StatusOK, projects)
 }
 
 func (h *ProjectHandler) AdminGetProject(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Project ID is required")
-		return
-	}
-
-	project, err := h.projectUseCase.GetByID(r.Context(), id)
+	project, err := h.projectUseCase.GetByID(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
-		if err == domain.ErrProjectNotFound {
-			httputil.RespondWithError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		respondError(w, err)
 		return
 	}
-
 	httputil.RespondWithJSON(w, http.StatusOK, project)
 }
 
-func (h *ProjectHandler) AddProjectImage(w http.ResponseWriter, r *http.Request) {
-	projectID := chi.URLParam(r, "id")
-	if projectID == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Project ID is required")
+func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
+	var req domain.ProjectInput
+	if !decodeJSON(w, r, &req) {
 		return
 	}
-
-	var req struct {
-		URL     string `json:"url"`
-		AltText string `json:"alt_text"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	img, err := h.projectUseCase.AddImage(r.Context(), projectID, req.URL, req.AltText)
+	project, err := h.projectUseCase.Create(r.Context(), &req)
 	if err != nil {
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		respondError(w, err)
 		return
 	}
-
-	httputil.RespondWithJSON(w, http.StatusCreated, img)
+	httputil.RespondWithJSON(w, http.StatusCreated, project)
 }
 
-func (h *ProjectHandler) ListProjectImages(w http.ResponseWriter, r *http.Request) {
-	projectID := chi.URLParam(r, "id")
-	if projectID == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Project ID is required")
+func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
+	var req domain.ProjectInput
+	if !decodeJSON(w, r, &req) {
 		return
 	}
-
-	images, err := h.projectUseCase.ListImages(r.Context(), projectID)
+	project, err := h.projectUseCase.Update(r.Context(), chi.URLParam(r, "id"), &req)
 	if err != nil {
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		respondError(w, err)
 		return
 	}
-
-	httputil.RespondWithJSON(w, http.StatusOK, images)
+	httputil.RespondWithJSON(w, http.StatusOK, project)
 }
 
-func (h *ProjectHandler) DeleteProjectImage(w http.ResponseWriter, r *http.Request) {
-	imageID := chi.URLParam(r, "imageId")
-	if imageID == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Image ID is required")
+func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
+	if err := h.projectUseCase.Delete(r.Context(), chi.URLParam(r, "id")); err != nil {
+		respondError(w, err)
 		return
 	}
+	respondDeleted(w)
+}
 
-	err := h.projectUseCase.DeleteImage(r.Context(), imageID)
-	if err != nil {
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
+func (h *ProjectHandler) ReorderProjects(w http.ResponseWriter, r *http.Request) {
+	var req domain.ReorderRequest
+	if !decodeJSON(w, r, &req) {
 		return
 	}
-
-	httputil.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+	if err := h.projectUseCase.Reorder(r.Context(), &req); err != nil {
+		respondError(w, err)
+		return
+	}
+	httputil.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "reordered"})
 }

@@ -1,5 +1,7 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# Frontend notes for agents
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+- This app runs **Next.js 15.5** (App Router, React 19). Route `params` are Promises (`const { locale } = await params`).
+- The full architecture (routes, API contract, design tokens) is documented in `../../.agents/AGENTS.md`.
+- Styling is plain CSS: tokens and shared primitives in `src/app/globals.css`, everything else in CSS Modules. There is no Tailwind.
+- Never hard-code page content. Texts, projects and links come from the Go API (`/api/v1/site`) and are edited in `/admin`. Only fixed UI strings belong in `src/i18n/dictionaries.ts`, in both `tr` and `en`.
+- Verify changes with `npm run typecheck` and `npm run build`.

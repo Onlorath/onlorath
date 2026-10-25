@@ -1,0 +1,12 @@
+.logo { display: flex; align-items: center; gap: 12px; }
+
+.mark {
+  display: grid;
+  grid-template-columns: repeat(3, 9px);
+  gap: 3.5px;
+  padding: 3px;
+}
+
+.mark span { width: 9px; height: 9px; border-radius: 2.5px; }
+
+.word { font-weight: 800; font-size: 23px; color: var(--text-main); }

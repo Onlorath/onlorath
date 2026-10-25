@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,14 +15,34 @@ import (
 	"backend/internal/domain"
 )
 
+var contactEmailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+
 type contactUsecase struct {
-	cfg *config.Config
+	contactRepo domain.ContactRepository
+	cfg         *config.Config
 }
 
-func NewContactUsecase(cfg *config.Config) domain.ContactUsecase {
+func NewContactUsecase(contactRepo domain.ContactRepository, cfg *config.Config) domain.ContactUsecase {
 	return &contactUsecase{
-		cfg: cfg,
+		contactRepo: contactRepo,
+		cfg:         cfg,
 	}
+}
+
+func (u *contactUsecase) ListMessages(ctx context.Context) ([]domain.ContactMessage, error) {
+	return u.contactRepo.List(ctx)
+}
+
+func (u *contactUsecase) SetRead(ctx context.Context, id string, read bool) error {
+	return u.contactRepo.SetRead(ctx, id, read)
+}
+
+func (u *contactUsecase) DeleteMessage(ctx context.Context, id string) error {
+	return u.contactRepo.Delete(ctx, id)
+}
+
+func (u *contactUsecase) CountUnread(ctx context.Context) (int, error) {
+	return u.contactRepo.CountUnread(ctx)
 }
 
 func (u *contactUsecase) SendContactEmail(ctx context.Context, req *domain.ContactRequest) error {
@@ -39,23 +58,33 @@ func (u *contactUsecase) SendContactEmail(ctx context.Context, req *domain.Conta
 	req.Message = strings.TrimSpace(req.Message)
 
 	if len(req.Name) == 0 || len(req.Name) > 100 {
-		return errors.New("invalid name length")
+		return &domain.ValidationError{Field: "name", Message: "invalid name length"}
 	}
 	if len(req.Message) == 0 || len(req.Message) > 2000 {
-		return errors.New("invalid message length (max 2000 chars)")
+		return &domain.ValidationError{Field: "message", Message: "invalid message length (max 2000 chars)"}
 	}
 
 	// 3. Anti-Spam: Strict Email format validation
-	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
-	if !emailRegex.MatchString(req.Email) {
-		return errors.New("invalid email format")
+	if !contactEmailRegex.MatchString(req.Email) {
+		return &domain.ValidationError{Field: "email", Message: "invalid email format"}
+	}
+
+	// 4. Store in the admin inbox; webhooks below are best-effort notifications.
+	msg := &domain.ContactMessage{
+		Name:    req.Name,
+		Email:   req.Email,
+		Message: req.Message,
+		Locale:  domain.NormalizeLocale(req.Locale),
+	}
+	if err := u.contactRepo.Create(ctx, msg); err != nil {
+		return err
 	}
 
 	if u.cfg.DiscordWebhookURL == "" && (u.cfg.TelegramBotToken == "" || u.cfg.TelegramChatID == "") {
 		log.Println("Warning: No Discord or Telegram webhooks configured for contact form")
 	}
 
-	// 4. Send to Webhooks
+	// 5. Send to Webhooks
 	messageContent := fmt.Sprintf("📬 **Yeni İletişim Formu Mesajı**\n**Gönderen:** %s\n**E-posta:** %s\n\n**Mesaj:**\n%s", req.Name, req.Email, req.Message)
 
 	client := &http.Client{Timeout: 5 * time.Second}
@@ -65,10 +94,10 @@ func (u *contactUsecase) SendContactEmail(ctx context.Context, req *domain.Conta
 	if u.cfg.DiscordWebhookURL != "" {
 		payload := map[string]string{"content": messageContent}
 		payloadBytes, _ := json.Marshal(payload)
-		
+
 		reqHTTP, _ := http.NewRequestWithContext(ctx, "POST", u.cfg.DiscordWebhookURL, bytes.NewBuffer(payloadBytes))
 		reqHTTP.Header.Set("Content-Type", "application/json")
-		
+
 		resp, err := client.Do(reqHTTP)
 		if err != nil {
 			errs = append(errs, "discord error: "+err.Error())
@@ -84,15 +113,15 @@ func (u *contactUsecase) SendContactEmail(ctx context.Context, req *domain.Conta
 	if u.cfg.TelegramBotToken != "" && u.cfg.TelegramChatID != "" {
 		tgURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", u.cfg.TelegramBotToken)
 		payload := map[string]interface{}{
-			"chat_id": u.cfg.TelegramChatID,
-			"text": messageContent,
+			"chat_id":    u.cfg.TelegramChatID,
+			"text":       messageContent,
 			"parse_mode": "Markdown", // Basic Markdown
 		}
 		payloadBytes, _ := json.Marshal(payload)
-		
+
 		reqHTTP, _ := http.NewRequestWithContext(ctx, "POST", tgURL, bytes.NewBuffer(payloadBytes))
 		reqHTTP.Header.Set("Content-Type", "application/json")
-		
+
 		resp, err := client.Do(reqHTTP)
 		if err != nil {
 			errs = append(errs, "telegram error: "+err.Error())

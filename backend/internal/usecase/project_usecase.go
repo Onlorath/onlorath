@@ -2,9 +2,11 @@ package usecase
 
 import (
 	"context"
+	"strings"
 
 	"backend/config"
 	"backend/internal/domain"
+	"backend/internal/pkg/slug"
 )
 
 type projectUseCase struct {
@@ -19,22 +21,41 @@ func NewProjectUseCase(projectRepo domain.ProjectRepository, cfg *config.Config)
 	}
 }
 
-func (u *projectUseCase) Create(ctx context.Context, req *domain.CreateProjectRequest) (*domain.Project, error) {
+// applyProjectInput copies the editable fields onto p, generating a slug from the
+// title when none is given.
+func applyProjectInput(p *domain.Project, req *domain.ProjectInput) {
+	s := strings.TrimSpace(req.Slug)
+	if s == "" {
+		s = req.Title.Pick(domain.LocaleTR)
+	}
+	p.Slug = slug.Make(s)
+	p.Published = req.Published
+	p.Category = req.Category
+	p.Color = req.Color
+	p.Title = req.Title
+	p.Platform = req.Platform
+	p.StatusLabel = req.StatusLabel
+	p.Description = req.Description
+	p.Meta = req.Meta
+	p.Actions = req.Actions
+	p.Media = req.Media
+
+	tech := make([]string, 0, len(req.Tech))
+	for _, t := range req.Tech {
+		if t = strings.TrimSpace(t); t != "" {
+			tech = append(tech, t)
+		}
+	}
+	p.Tech = tech
+}
+
+func (u *projectUseCase) Create(ctx context.Context, req *domain.ProjectInput) (*domain.Project, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-
-	project := &domain.Project{
-		Title:       req.Title,
-		Description: req.Description,
-		Tech:        req.Tech,
-		Status:      req.Status,
-		CoverImage:  req.CoverImage,
-		SortOrder:   req.SortOrder,
-	}
-
-	err := u.projectRepo.Create(ctx, project)
-	if err != nil {
+	project := &domain.Project{}
+	applyProjectInput(project, req)
+	if err := u.projectRepo.Create(ctx, project); err != nil {
 		return nil, err
 	}
 	return project, nil
@@ -44,37 +65,17 @@ func (u *projectUseCase) GetByID(ctx context.Context, id string) (*domain.Projec
 	return u.projectRepo.GetByID(ctx, id)
 }
 
-func (u *projectUseCase) List(ctx context.Context) ([]domain.Project, error) {
-	return u.projectRepo.List(ctx)
+func (u *projectUseCase) List(ctx context.Context, publishedOnly bool) ([]domain.Project, error) {
+	return u.projectRepo.List(ctx, publishedOnly)
 }
 
-func (u *projectUseCase) Update(ctx context.Context, id string, req *domain.UpdateProjectRequest) (*domain.Project, error) {
-	project, err := u.projectRepo.GetByID(ctx, id)
-	if err != nil {
+func (u *projectUseCase) Update(ctx context.Context, id string, req *domain.ProjectInput) (*domain.Project, error) {
+	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-
-	if req.Title != nil {
-		project.Title = *req.Title
-	}
-	if req.Description != nil {
-		project.Description = *req.Description
-	}
-	if req.Tech != nil {
-		project.Tech = req.Tech
-	}
-	if req.Status != nil {
-		project.Status = *req.Status
-	}
-	if req.CoverImage != nil {
-		project.CoverImage = *req.CoverImage
-	}
-	if req.SortOrder != nil {
-		project.SortOrder = *req.SortOrder
-	}
-
-	err = u.projectRepo.Update(ctx, project)
-	if err != nil {
+	project := &domain.Project{ID: id}
+	applyProjectInput(project, req)
+	if err := u.projectRepo.Update(ctx, project); err != nil {
 		return nil, err
 	}
 	return project, nil
@@ -84,24 +85,9 @@ func (u *projectUseCase) Delete(ctx context.Context, id string) error {
 	return u.projectRepo.Delete(ctx, id)
 }
 
-func (u *projectUseCase) AddImage(ctx context.Context, projectID string, url string, altText string) (*domain.ProjectImage, error) {
-	img := &domain.ProjectImage{
-		ProjectID: projectID,
-		URL:       url,
-		AltText:   altText,
-		SortOrder: 0,
+func (u *projectUseCase) Reorder(ctx context.Context, req *domain.ReorderRequest) error {
+	if err := req.Validate(); err != nil {
+		return err
 	}
-	err := u.projectRepo.AddImage(ctx, img)
-	if err != nil {
-		return nil, err
-	}
-	return img, nil
-}
-
-func (u *projectUseCase) ListImages(ctx context.Context, projectID string) ([]domain.ProjectImage, error) {
-	return u.projectRepo.ListImages(ctx, projectID)
-}
-
-func (u *projectUseCase) DeleteImage(ctx context.Context, imageID string) error {
-	return u.projectRepo.DeleteImage(ctx, imageID)
+	return u.projectRepo.Reorder(ctx, req.IDs)
 }

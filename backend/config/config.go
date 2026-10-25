@@ -3,6 +3,8 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -25,6 +27,17 @@ type Config struct {
 	DiscordWebhookURL  string
 	TelegramBotToken   string
 	TelegramChatID     string
+
+	// Admin bootstrap: when both are set, this account is created (or promoted) as admin at startup.
+	AdminEmail        string
+	AdminPassword     string
+	AllowRegistration bool
+	CookieSecure      bool
+
+	ChatUserLimit   int
+	ChatGlobalLimit int
+	UploadMaxBytes  int64
+	UploadDir       string
 }
 
 func LoadConfig() (*Config, error) {
@@ -65,6 +78,9 @@ func LoadConfig() (*Config, error) {
 
 	clientURL := getEnv("CLIENT_URL", "http://localhost:3000")
 	geminiAPIKey := getEnv("GEMINI_API_KEY", "")
+	if strings.HasPrefix(geminiAPIKey, "your_") { // untouched .env.example placeholder
+		geminiAPIKey = ""
+	}
 	if geminiAPIKey == "" {
 		log.Println("Warning: GEMINI_API_KEY is not set, chat will not work")
 	}
@@ -86,6 +102,14 @@ func LoadConfig() (*Config, error) {
 		DiscordWebhookURL:  getEnv("DISCORD_WEBHOOK_URL", ""),
 		TelegramBotToken:   getEnv("TELEGRAM_BOT_TOKEN", ""),
 		TelegramChatID:     getEnv("TELEGRAM_CHAT_ID", ""),
+		AdminEmail:         getEnv("ADMIN_EMAIL", ""),
+		AdminPassword:      getEnv("ADMIN_PASSWORD", ""),
+		AllowRegistration:  getEnvBool("ALLOW_REGISTRATION", false),
+		CookieSecure:       getEnvBool("COOKIE_SECURE", false),
+		ChatUserLimit:      getEnvInt("CHAT_USER_LIMIT", 15),
+		ChatGlobalLimit:    getEnvInt("CHAT_GLOBAL_LIMIT", 50),
+		UploadMaxBytes:     int64(getEnvInt("UPLOAD_MAX_MB", 25)) << 20,
+		UploadDir:          getEnv("UPLOAD_DIR", "assets/uploads"),
 	}, nil
 }
 
@@ -94,4 +118,20 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func getEnvBool(key string, fallback bool) bool {
+	v, err := strconv.ParseBool(getEnv(key, ""))
+	if err != nil {
+		return fallback
+	}
+	return v
+}
+
+func getEnvInt(key string, fallback int) int {
+	v, err := strconv.Atoi(getEnv(key, ""))
+	if err != nil || v <= 0 {
+		return fallback
+	}
+	return v
 }

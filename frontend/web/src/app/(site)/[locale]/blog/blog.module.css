@@ -1,0 +1,58 @@
+.main { padding: clamp(40px, 6vw, 80px) 0 80px; }
+
+.intro { max-width: 720px; margin-bottom: 40px; }
+.title { font-size: clamp(38px, 5.6vw, 64px); font-weight: 700; line-height: 1.08; }
+
+.empty { padding: 40px 0; color: var(--text-muted); font-size: 18px; }
+
+/* Bento grid of posts */
+.grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.card {
+  border-radius: 24px;
+  border: 1.5px solid var(--border-subtle);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+}
+.card:hover { transform: translateY(-2px); box-shadow: 0 16px 36px -12px rgba(43, 40, 38, 0.12); }
+
+.featured { grid-column: span 2; background: var(--c-soft); border-color: transparent; }
+
+.cardLink { display: flex; flex-direction: column; gap: 10px; padding: 28px; height: 100%; }
+
+.cover { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 14px; margin-bottom: 6px; }
+
+.date { font-size: 13px; color: var(--text-muted); }
+
+.cardTitle { font-size: 24px; font-weight: 700; line-height: 1.2; }
+.featured .cardTitle { font-size: clamp(26px, 3vw, 34px); }
+
+.excerpt { color: var(--text-muted); font-size: 16px; }
+
+.read { margin-top: auto; padding-top: 8px; font-weight: 600; font-size: 15px; color: var(--c-ink); }
+
+/* Post page */
+.article { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; }
+
+.back { align-self: flex-start; font-weight: 600; color: var(--text-muted); margin-bottom: 28px; }
+.back:hover { color: var(--text-main); }
+
+.postTitle { font-size: clamp(36px, 5vw, 56px); font-weight: 700; line-height: 1.1; margin: 10px 0 16px; }
+.postLead { font-size: 21px; color: var(--text-muted); margin-bottom: 28px; }
+.postCover { width: 100%; border-radius: 24px; border: 1.5px solid var(--border-subtle); margin-bottom: 36px; }
+
+@media (max-width: 1023px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 767px) {
+  .grid { grid-template-columns: 1fr; gap: 16px; }
+  .featured { grid-column: auto; }
+  .cardLink { padding: 22px; }
+}

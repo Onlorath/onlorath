@@ -43,6 +43,10 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 			httputil.RespondWithError(w, http.StatusConflict, err.Error())
 			return
 		}
+		if err == domain.ErrRegistrationDisabled {
+			httputil.RespondWithError(w, http.StatusForbidden, err.Error())
+			return
+		}
 		httputil.RespondWithError(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
@@ -80,7 +84,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  time.Now().Add(h.cfg.RefreshTokenExpiry),
 		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
+		Secure:   h.cfg.CookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	}
 	http.SetCookie(w, cookie)
@@ -140,11 +144,10 @@ func (h *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
+		Secure:   h.cfg.CookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	}
 	http.SetCookie(w, cookie)
 
 	httputil.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "logged_out"})
 }
-

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -50,8 +49,7 @@ func (h *ChatHandler) setQuotaHeaders(w http.ResponseWriter, ctx context.Context
 
 func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	var req domain.SendMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -72,15 +70,18 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.chatUseCase.SendMessage(ctx, userID, sessionID, &req)
 	if err != nil {
-		if err == domain.ErrGlobalLimitReached {
+		// Error bodies carry stable codes that the frontend translates.
+		switch err {
+		case domain.ErrGlobalLimitReached, domain.ErrChatLimitReached:
+			h.setQuotaHeaders(w, ctx, userID, sessionID)
 			httputil.RespondWithError(w, http.StatusTooManyRequests, err.Error())
-			return
+		case domain.ErrChatUnavailable, domain.ErrChatUpstreamBusy:
+			httputil.RespondWithError(w, http.StatusServiceUnavailable, err.Error())
+		case domain.ErrEmptyChatMessage, domain.ErrChatMessageTooLong:
+			httputil.RespondWithError(w, http.StatusBadRequest, err.Error())
+		default:
+			respondError(w, err)
 		}
-		if err == domain.ErrChatLimitReached {
-			httputil.RespondWithError(w, http.StatusTooManyRequests, err.Error())
-			return
-		}
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 

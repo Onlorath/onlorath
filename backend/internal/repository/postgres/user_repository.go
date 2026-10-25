@@ -81,3 +81,19 @@ func (r *userRepository) GetByID(ctx context.Context, id string) (*domain.User, 
 
 	return &user, nil
 }
+
+// UpdateRole changes a user's role.
+func (r *userRepository) UpdateRole(ctx context.Context, id string, role string) error {
+	res, err := r.db.ExecContext(ctx, `UPDATE users SET role = $1 WHERE id = $2`, role, id)
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return domain.ErrUserNotFound
+	}
+	return nil
+}

@@ -1,0 +1,35 @@
+.frame {
+  flex: 1 1 500px;
+  min-width: 290px;
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1.5px solid rgba(43, 40, 38, 0.14);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.fill { width: 100%; height: 100%; border: 0; }
+.cover { object-fit: cover; }
+
+.placeholder {
+  border-style: dashed;
+  border-color: rgba(43, 40, 38, 0.2);
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px;
+}
+
+.glyph { color: var(--c-strong); }
+
+.caption { font-size: 15px; font-weight: 500; }
+
+@media (max-width: 640px) {
+  .frame { min-width: 100%; flex-basis: 100%; }
+}

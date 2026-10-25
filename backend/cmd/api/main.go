@@ -14,8 +14,10 @@ import (
 	httpDelivery "backend/internal/delivery/http"
 	"backend/internal/delivery/http/handler"
 	"backend/internal/delivery/http/middleware"
+	"backend/internal/pkg/migrate"
 	"backend/internal/repository/postgres"
 	"backend/internal/usecase"
+	"backend/migrations"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // PostgreSQL driver
@@ -53,52 +55,71 @@ func main() {
 
 	log.Println("Database connection established successfully.")
 
-	// 3. Dependency Injection Wiring
+	// 3. Apply pending schema migrations
+	migrateCtx, cancelMigrate := context.WithTimeout(context.Background(), 2*time.Minute)
+	if err := migrate.Run(migrateCtx, db, migrations.FS); err != nil {
+		log.Fatalf("Database migration failed: %v", err)
+	}
+	cancelMigrate()
+
+	// 4. Dependency Injection Wiring
 	userRepo := postgres.NewUserRepository(db)
 	userUseCase := usecase.NewUserUseCase(userRepo, cfg)
 	userHandler := handler.NewUserHandler(userUseCase, cfg)
 
-	// Project DI
 	projectRepo := postgres.NewProjectRepository(db)
 	projectUseCase := usecase.NewProjectUseCase(projectRepo, cfg)
 	projectHandler := handler.NewProjectHandler(projectUseCase, cfg)
 
+	siteRepo := postgres.NewSiteRepository(db)
+	siteUseCase := usecase.NewSiteUseCase(siteRepo, projectRepo)
+
 	chatRepo := postgres.NewChatRepository(db)
-	chatUseCase := usecase.NewChatUseCase(chatRepo, projectRepo, cfg)
+	chatUseCase := usecase.NewChatUseCase(chatRepo, siteUseCase, cfg)
 	chatHandler := handler.NewChatHandler(chatUseCase, cfg)
 
-	// Blog DI
 	blogRepo := postgres.NewBlogRepository(db)
 	blogUseCase := usecase.NewBlogUseCase(blogRepo, cfg)
 	blogHandler := handler.NewBlogHandler(blogUseCase, cfg)
 
-	// Upload DI
-	uploadHandler := handler.NewUploadHandler()
-
-	contactUseCase := usecase.NewContactUsecase(cfg)
+	contactRepo := postgres.NewContactRepository(db)
+	contactUseCase := usecase.NewContactUsecase(contactRepo, cfg)
 	contactHandler := handler.NewContactHandler(contactUseCase)
+
+	siteHandler := handler.NewSiteHandler(siteUseCase, projectUseCase, blogUseCase, contactUseCase)
+	uploadHandler := handler.NewUploadHandler(cfg)
 
 	authM := middleware.NewAuthMiddleware(cfg)
 
-	// 4. Initialize Router
-	router := httpDelivery.NewRouter(
-		cfg,
-		userHandler,
-		chatHandler,
-		blogHandler,
-		projectHandler,
-		uploadHandler,
-		contactHandler,
-		authM,
-	)
+	// 5. Bootstrap the admin account from ADMIN_EMAIL / ADMIN_PASSWORD
+	if cfg.AdminEmail != "" && cfg.AdminPassword != "" {
+		if err := userUseCase.EnsureAdmin(context.Background(), cfg.AdminEmail, cfg.AdminPassword); err != nil {
+			log.Fatalf("Failed to bootstrap admin account: %v", err)
+		}
+		log.Printf("Admin account ready: %s", cfg.AdminEmail)
+	} else {
+		log.Println("Warning: ADMIN_EMAIL / ADMIN_PASSWORD not set; no admin account is bootstrapped.")
+	}
 
-	// 5. Configure and Start HTTP Server
+	// 6. Initialize Router
+	router := httpDelivery.NewRouter(cfg, httpDelivery.Handlers{
+		User:    userHandler,
+		Chat:    chatHandler,
+		Blog:    blogHandler,
+		Project: projectHandler,
+		Site:    siteHandler,
+		Upload:  uploadHandler,
+		Contact: contactHandler,
+	}, authM)
+
+	// 7. Configure and Start HTTP Server
 	serverAddr := fmt.Sprintf(":%s", cfg.Port)
 	srv := &http.Server{
-		Addr:         serverAddr,
-		Handler:      router,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		Addr:    serverAddr,
+		Handler: router,
+		// Generous timeouts so admin video uploads (up to UPLOAD_MAX_MB) can complete.
+		ReadTimeout:  2 * time.Minute,
+		WriteTimeout: 2 * time.Minute,
 		IdleTimeout:  60 * time.Second,
 	}
 
@@ -111,7 +132,7 @@ func main() {
 		serverErrors <- srv.ListenAndServe()
 	}()
 
-	// 6. Graceful Shutdown Setup
+	// 8. Graceful Shutdown Setup
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 

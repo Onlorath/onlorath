@@ -2,11 +2,12 @@ package usecase
 
 import (
 	"context"
-	"regexp"
 	"strings"
+	"time"
 
 	"backend/config"
 	"backend/internal/domain"
+	"backend/internal/pkg/slug"
 )
 
 type blogUseCase struct {
@@ -21,47 +22,32 @@ func NewBlogUseCase(blogRepo domain.BlogRepository, cfg *config.Config) domain.B
 	}
 }
 
-func generateSlug(title string) string {
-	s := strings.ToLower(title)
-	// Replace Turkish characters
-	s = strings.ReplaceAll(s, "ç", "c")
-	s = strings.ReplaceAll(s, "ğ", "g")
-	s = strings.ReplaceAll(s, "ı", "i")
-	s = strings.ReplaceAll(s, "ö", "o")
-	s = strings.ReplaceAll(s, "ş", "s")
-	s = strings.ReplaceAll(s, "ü", "u")
-
-	// Replace non-alphanumeric chars with hyphen
-	reg := regexp.MustCompile(`[^a-z0-9]+`)
-	s = reg.ReplaceAllString(s, "-")
-	
-	// Trim leading/trailing hyphens
-	s = strings.Trim(s, "-")
-
+// applyBlogInput copies editable fields onto b. published_at is stamped the first
+// time a post is published and kept afterwards, so unpublish/republish keeps its date.
+func applyBlogInput(b *domain.Blog, req *domain.BlogInput) {
+	s := strings.TrimSpace(req.Slug)
 	if s == "" {
-		s = "untitled"
+		s = req.Title.Pick(domain.LocaleTR)
 	}
-	return s
+	b.Slug = slug.Make(s)
+	b.Title = req.Title
+	b.Excerpt = req.Excerpt
+	b.Content = req.Content
+	b.CoverImage = req.CoverImage
+	b.Published = req.Published
+	if b.Published && b.PublishedAt == nil {
+		now := time.Now()
+		b.PublishedAt = &now
+	}
 }
 
-func (u *blogUseCase) Create(ctx context.Context, authorID string, req *domain.CreateBlogRequest) (*domain.Blog, error) {
+func (u *blogUseCase) Create(ctx context.Context, authorID string, req *domain.BlogInput) (*domain.Blog, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-
-	slug := generateSlug(req.Title)
-
-	blog := &domain.Blog{
-		Title:      req.Title,
-		Slug:       slug,
-		Content:    req.Content,
-		CoverImage: req.CoverImage,
-		AuthorID:   &authorID,
-		Published:  req.Published,
-	}
-
-	err := u.blogRepo.Create(ctx, blog)
-	if err != nil {
+	blog := &domain.Blog{AuthorID: &authorID}
+	applyBlogInput(blog, req)
+	if err := u.blogRepo.Create(ctx, blog); err != nil {
 		return nil, err
 	}
 	return blog, nil
@@ -71,36 +57,32 @@ func (u *blogUseCase) GetByID(ctx context.Context, id string) (*domain.Blog, err
 	return u.blogRepo.GetByID(ctx, id)
 }
 
-func (u *blogUseCase) GetBySlug(ctx context.Context, slug string) (*domain.Blog, error) {
-	return u.blogRepo.GetBySlug(ctx, slug)
+// GetPublishedBySlug hides drafts from the public site.
+func (u *blogUseCase) GetPublishedBySlug(ctx context.Context, slug string) (*domain.Blog, error) {
+	blog, err := u.blogRepo.GetBySlug(ctx, slug)
+	if err != nil {
+		return nil, err
+	}
+	if !blog.Published {
+		return nil, domain.ErrBlogNotFound
+	}
+	return blog, nil
 }
 
 func (u *blogUseCase) List(ctx context.Context, publishedOnly bool) ([]domain.Blog, error) {
 	return u.blogRepo.List(ctx, publishedOnly)
 }
 
-func (u *blogUseCase) Update(ctx context.Context, id string, req *domain.UpdateBlogRequest) (*domain.Blog, error) {
+func (u *blogUseCase) Update(ctx context.Context, id string, req *domain.BlogInput) (*domain.Blog, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
 	blog, err := u.blogRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-
-	if req.Title != nil {
-		blog.Title = *req.Title
-		blog.Slug = generateSlug(*req.Title)
-	}
-	if req.Content != nil {
-		blog.Content = *req.Content
-	}
-	if req.CoverImage != nil {
-		blog.CoverImage = *req.CoverImage
-	}
-	if req.Published != nil {
-		blog.Published = *req.Published
-	}
-
-	err = u.blogRepo.Update(ctx, blog)
-	if err != nil {
+	applyBlogInput(blog, req)
+	if err := u.blogRepo.Update(ctx, blog); err != nil {
 		return nil, err
 	}
 	return blog, nil
@@ -108,26 +90,4 @@ func (u *blogUseCase) Update(ctx context.Context, id string, req *domain.UpdateB
 
 func (u *blogUseCase) Delete(ctx context.Context, id string) error {
 	return u.blogRepo.Delete(ctx, id)
-}
-
-func (u *blogUseCase) AddImage(ctx context.Context, blogID string, url string, altText string) (*domain.BlogImage, error) {
-	img := &domain.BlogImage{
-		BlogID:    blogID,
-		URL:       url,
-		AltText:   altText,
-		SortOrder: 0, // Default sorting
-	}
-	err := u.blogRepo.AddImage(ctx, img)
-	if err != nil {
-		return nil, err
-	}
-	return img, nil
-}
-
-func (u *blogUseCase) ListImages(ctx context.Context, blogID string) ([]domain.BlogImage, error) {
-	return u.blogRepo.ListImages(ctx, blogID)
-}
-
-func (u *blogUseCase) DeleteImage(ctx context.Context, imageID string) error {
-	return u.blogRepo.DeleteImage(ctx, imageID)
 }

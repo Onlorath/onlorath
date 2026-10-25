@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"backend/config"
@@ -23,193 +22,79 @@ func NewBlogHandler(blogUseCase domain.BlogUseCase, cfg *config.Config) *BlogHan
 	}
 }
 
-func (h *BlogHandler) CreateBlog(w http.ResponseWriter, r *http.Request) {
-	var req domain.CreateBlogRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	authorID, ok := r.Context().Value(domain.ContextKeyUserID).(string)
-	if !ok {
-		httputil.RespondWithError(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	blog, err := h.blogUseCase.Create(r.Context(), authorID, &req)
-	if err != nil {
-		if err == domain.ErrBlogSlugExists {
-			httputil.RespondWithError(w, http.StatusConflict, err.Error())
-			return
-		}
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	httputil.RespondWithJSON(w, http.StatusCreated, blog)
-}
-
-func (h *BlogHandler) UpdateBlog(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Blog ID is required")
-		return
-	}
-
-	var req domain.UpdateBlogRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	blog, err := h.blogUseCase.Update(r.Context(), id, &req)
-	if err != nil {
-		if err == domain.ErrBlogNotFound {
-			httputil.RespondWithError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		if err == domain.ErrBlogSlugExists {
-			httputil.RespondWithError(w, http.StatusConflict, err.Error())
-			return
-		}
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	httputil.RespondWithJSON(w, http.StatusOK, blog)
-}
-
-func (h *BlogHandler) DeleteBlog(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Blog ID is required")
-		return
-	}
-
-	err := h.blogUseCase.Delete(r.Context(), id)
-	if err != nil {
-		if err == domain.ErrBlogNotFound {
-			httputil.RespondWithError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	httputil.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
-}
-
-func (h *BlogHandler) GetBlog(w http.ResponseWriter, r *http.Request) {
-	slug := chi.URLParam(r, "slug")
-	if slug == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Blog slug is required")
-		return
-	}
-
-	blog, err := h.blogUseCase.GetBySlug(r.Context(), slug)
-	if err != nil {
-		if err == domain.ErrBlogNotFound {
-			httputil.RespondWithError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	httputil.RespondWithJSON(w, http.StatusOK, blog)
-}
-
+// ListBlogs returns published posts (public).
 func (h *BlogHandler) ListBlogs(w http.ResponseWriter, r *http.Request) {
-	blogs, err := h.blogUseCase.List(r.Context(), true) // only published for public
+	blogs, err := h.blogUseCase.List(r.Context(), true)
 	if err != nil {
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		respondError(w, err)
 		return
 	}
 	httputil.RespondWithJSON(w, http.StatusOK, blogs)
 }
 
-func (h *BlogHandler) AdminListBlogs(w http.ResponseWriter, r *http.Request) {
-	blogs, err := h.blogUseCase.List(r.Context(), false) // all for admin
+// GetBlog returns one published post by slug (public).
+func (h *BlogHandler) GetBlog(w http.ResponseWriter, r *http.Request) {
+	blog, err := h.blogUseCase.GetPublishedBySlug(r.Context(), chi.URLParam(r, "slug"))
 	if err != nil {
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		respondError(w, err)
+		return
+	}
+	httputil.RespondWithJSON(w, http.StatusOK, blog)
+}
+
+func (h *BlogHandler) AdminListBlogs(w http.ResponseWriter, r *http.Request) {
+	blogs, err := h.blogUseCase.List(r.Context(), false)
+	if err != nil {
+		respondError(w, err)
 		return
 	}
 	httputil.RespondWithJSON(w, http.StatusOK, blogs)
 }
 
 func (h *BlogHandler) AdminGetBlog(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Blog ID is required")
-		return
-	}
-
-	blog, err := h.blogUseCase.GetByID(r.Context(), id)
+	blog, err := h.blogUseCase.GetByID(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
-		if err == domain.ErrBlogNotFound {
-			httputil.RespondWithError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		respondError(w, err)
 		return
 	}
-
 	httputil.RespondWithJSON(w, http.StatusOK, blog)
 }
 
-func (h *BlogHandler) AddBlogImage(w http.ResponseWriter, r *http.Request) {
-	blogID := chi.URLParam(r, "id")
-	if blogID == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Blog ID is required")
+func (h *BlogHandler) CreateBlog(w http.ResponseWriter, r *http.Request) {
+	var req domain.BlogInput
+	if !decodeJSON(w, r, &req) {
 		return
 	}
-
-	var req struct {
-		URL     string `json:"url"`
-		AltText string `json:"alt_text"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+	authorID, ok := r.Context().Value(domain.ContextKeyUserID).(string)
+	if !ok {
+		httputil.RespondWithError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
-
-	img, err := h.blogUseCase.AddImage(r.Context(), blogID, req.URL, req.AltText)
+	blog, err := h.blogUseCase.Create(r.Context(), authorID, &req)
 	if err != nil {
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		respondError(w, err)
 		return
 	}
-
-	httputil.RespondWithJSON(w, http.StatusCreated, img)
+	httputil.RespondWithJSON(w, http.StatusCreated, blog)
 }
 
-func (h *BlogHandler) ListBlogImages(w http.ResponseWriter, r *http.Request) {
-	blogID := chi.URLParam(r, "id")
-	if blogID == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Blog ID is required")
+func (h *BlogHandler) UpdateBlog(w http.ResponseWriter, r *http.Request) {
+	var req domain.BlogInput
+	if !decodeJSON(w, r, &req) {
 		return
 	}
-
-	images, err := h.blogUseCase.ListImages(r.Context(), blogID)
+	blog, err := h.blogUseCase.Update(r.Context(), chi.URLParam(r, "id"), &req)
 	if err != nil {
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		respondError(w, err)
 		return
 	}
-
-	httputil.RespondWithJSON(w, http.StatusOK, images)
+	httputil.RespondWithJSON(w, http.StatusOK, blog)
 }
 
-func (h *BlogHandler) DeleteBlogImage(w http.ResponseWriter, r *http.Request) {
-	imageID := chi.URLParam(r, "imageId")
-	if imageID == "" {
-		httputil.RespondWithError(w, http.StatusBadRequest, "Image ID is required")
+func (h *BlogHandler) DeleteBlog(w http.ResponseWriter, r *http.Request) {
+	if err := h.blogUseCase.Delete(r.Context(), chi.URLParam(r, "id")); err != nil {
+		respondError(w, err)
 		return
 	}
-
-	err := h.blogUseCase.DeleteImage(r.Context(), imageID)
-	if err != nil {
-		httputil.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	httputil.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+	respondDeleted(w)
 }
