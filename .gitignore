@@ -19,3 +19,9 @@ backend/api
 # Operating System files
 .DS_Store
 Thumbs.db
+
+# IDE settings
+.vscode/
+
+# Backup directories
+frontend_backup_*/
