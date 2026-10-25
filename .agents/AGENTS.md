@@ -233,6 +233,7 @@ All handlers + AuthMiddleware → NewRouter()
 
 | Action | Command | Working Directory |
 |--------|---------|-------------------|
+| Start everything (DB + API + web) | `.\dev.ps1` (`-StopDb` to also stop Postgres on exit) | repo root |
 | Start Postgres | `docker compose up -d` | `onlorath/infra/` |
 | Stop Postgres | `docker compose down` | `onlorath/infra/` |
 | Start Backend | `go run cmd/api/main.go` | `backend/` |
