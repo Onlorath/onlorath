@@ -25,6 +25,7 @@ type chatUseCase struct {
 	siteUseCase domain.SiteUseCase
 	cfg         *config.Config
 	genaiClient *genai.Client
+	models      *modelPool
 
 	notifier notify.Notifier
 	// notifyLimiter caps owner alerts: when the assistant is down, messages aren't
@@ -53,6 +54,7 @@ func geminiBackend(apiKey, override string) genai.Backend {
 
 func NewChatUseCase(chatRepo domain.ChatRepository, siteUseCase domain.SiteUseCase, notifier notify.Notifier, cfg *config.Config) domain.ChatUseCase {
 	var genaiClient *genai.Client
+	models := newModelPool(parseModelList(cfg.GeminiModels))
 
 	if cfg.GeminiAPIKey != "" {
 		backend := geminiBackend(cfg.GeminiAPIKey, cfg.GeminiBackend)
@@ -64,7 +66,7 @@ func NewChatUseCase(chatRepo domain.ChatRepository, siteUseCase domain.SiteUseCa
 			log.Printf("Failed to initialize Gemini client (%s): %v", backend, err)
 		} else {
 			genaiClient = client
-			log.Printf("Chat assistant uses %s", backend)
+			log.Printf("Chat assistant uses %s, models: %s", backend, strings.Join(models.models, ", "))
 		}
 	} else {
 		log.Println("Warning: Gemini API Key is empty. Chat functionality will be disabled.")
@@ -75,6 +77,7 @@ func NewChatUseCase(chatRepo domain.ChatRepository, siteUseCase domain.SiteUseCa
 		siteUseCase:   siteUseCase,
 		cfg:           cfg,
 		genaiClient:   genaiClient,
+		models:        models,
 		notifier:      notifier,
 		notifyLimiter: rate.NewLimiter(rate.Every(30*time.Second), 20),
 	}
@@ -120,19 +123,6 @@ func (u *chatUseCase) loadSite(ctx context.Context) (*domain.Site, error) {
 	u.siteCache, u.siteCacheSet = site, time.Now()
 	u.cacheMu.Unlock()
 	return site, nil
-}
-
-// mapGeminiError turns Gemini failures into the stable chat error codes:
-// overload → retry later, bad/expired key → chat unavailable.
-func mapGeminiError(err error) error {
-	msg := strings.ToLower(err.Error())
-	switch {
-	case strings.Contains(msg, "high demand") || strings.Contains(msg, "unavailable") || strings.Contains(msg, "503"):
-		return domain.ErrChatUpstreamBusy
-	case strings.Contains(msg, "api key") || strings.Contains(msg, "permission_denied") || strings.Contains(msg, "unauthenticated"):
-		return domain.ErrChatUnavailable
-	}
-	return err
 }
 
 func (u *chatUseCase) SendMessage(ctx context.Context, userID string, sessionID string, req *domain.SendMessageRequest) (*domain.ChatResponse, error) {
@@ -246,19 +236,20 @@ func (u *chatUseCase) SendMessage(ctx context.Context, userID string, sessionID 
 		},
 	}
 
-	chat, err := u.genaiClient.Chats.Create(ctx, "gemini-2.5-flash", chatConfig, history)
+	replyText, err := u.models.generate(ctx, func(ctx context.Context, model string) (string, error) {
+		chat, err := u.genaiClient.Chats.Create(ctx, model, chatConfig, history)
+		if err != nil {
+			return "", err
+		}
+		resp, err := chat.SendMessage(ctx, genai.Part{Text: req.Message})
+		if err != nil {
+			return "", err
+		}
+		return resp.Text(), nil
+	})
 	if err != nil {
-		log.Printf("Gemini Chats.Create error: %v", err)
-		return nil, mapGeminiError(err)
+		return nil, err
 	}
-
-	resp, err := chat.SendMessage(ctx, genai.Part{Text: req.Message})
-	if err != nil {
-		log.Printf("Gemini SendMessage error: %v", err)
-		return nil, mapGeminiError(err)
-	}
-
-	replyText := resp.Text()
 	if replyText == "" {
 		replyText = "Sorry, I couldn't generate a response."
 	}

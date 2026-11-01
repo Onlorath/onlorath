@@ -57,6 +57,13 @@ Environment değişkenleri:
 | `CLIENT_URL` | `https://onlorath.vercel.app` |
 | `GEMINI_API_KEY` | Sohbet asistanı için. Google AI Studio (`AIza…`) ve Vertex AI express (`AQ.…`) anahtarlarının ikisi de çalışır; tür önekten anlaşılır |
 | `GEMINI_BACKEND` | İsteğe bağlı: `gemini` ya da `vertex` (otomatik seçimi ezmek için) |
+| `GEMINI_MODELS` | İsteğe bağlı, virgülle ayrılmış deneme sırası. Boşsa: `gemini-2.5-flash,gemini-2.5-flash-lite,gemini-2.0-flash,gemini-2.0-flash-lite`. Bir modelin kotası dolunca ya da yoğunken sıradakine geçilir |
+
+> **Ücretsiz kalmak için:** anahtarı [Google AI Studio](https://aistudio.google.com/apikey)'dan, **faturalandırma
+> (billing) bağlı olmayan** bir projede oluştur (`AIza…` ile başlar). Böyle bir anahtar ücretsiz kotayı aşınca
+> ücret çıkarmaz, sadece `429` döner; uygulama da sıradaki modele geçer. Vertex AI (`AQ.…`) anahtarları
+> Google Cloud faturalandırmasına bağlanabildiği için önerilmez. Hangi modellerin ücretsiz olduğu
+> AI Studio → Rate limits sayfasında görünür; liste değişirse `GEMINI_MODELS`'i ona göre güncelle.
 | `SUPABASE_URL` | `https://PROJE.supabase.co` |
 | `SUPABASE_SERVICE_KEY` | 1.4'teki anahtar |
 | `SUPABASE_BUCKET` | `uploads` |

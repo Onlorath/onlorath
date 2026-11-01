@@ -31,7 +31,9 @@ type Config struct {
 	ClientURL          string
 	GeminiAPIKey       string
 	// GeminiBackend forces "gemini" (AI Studio) or "vertex"; empty picks by key prefix.
-	GeminiBackend     string
+	GeminiBackend string
+	// GeminiModels is a comma-separated fallback order; empty uses the built-in list.
+	GeminiModels      string
 	DiscordWebhookURL string
 	TelegramBotToken  string
 	TelegramChatID    string
@@ -139,6 +141,7 @@ func LoadConfig() (*Config, error) {
 		ClientURL:          clientURL,
 		GeminiAPIKey:       geminiAPIKey,
 		GeminiBackend:      getEnv("GEMINI_BACKEND", ""),
+		GeminiModels:       getEnv("GEMINI_MODELS", ""),
 		DiscordWebhookURL:  getEnv("DISCORD_WEBHOOK_URL", ""),
 		TelegramBotToken:   getEnv("TELEGRAM_BOT_TOKEN", ""),
 		TelegramChatID:     getEnv("TELEGRAM_CHAT_ID", ""),
