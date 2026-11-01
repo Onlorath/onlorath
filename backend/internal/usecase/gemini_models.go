@@ -15,16 +15,17 @@ import (
 
 // DefaultGeminiModels are tried in order; each later one is a fallback for when the
 // previous model is rate limited, overloaded or not available to the key.
-// Override with GEMINI_MODELS (comma separated) as Google's free models change.
-var DefaultGeminiModels = []string{"gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.0-flash-lite"}
+// Stable Flash / Flash-Lite models as of 2026-10 (2.0 is shut down, 2.5 is closed to
+// new projects). Override with GEMINI_MODELS (comma separated) as Google's lineup changes.
+var DefaultGeminiModels = []string{"gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"}
 
 type failureKind int
 
 const (
-	failFatal       failureKind = iota // auth, billing, bad request: another model won't help
+	failFatal       failureKind = iota // bad/revoked key, malformed request: another model won't help
 	failRateLimited                    // 429 RESOURCE_EXHAUSTED
 	failOverloaded                     // 5xx, UNAVAILABLE
-	failNoModel                        // model unknown or not enabled for this key
+	failNoModel                        // model unknown, shut down or not open to this project/tier
 )
 
 func classifyGeminiError(err error) failureKind {
@@ -32,14 +33,21 @@ func classifyGeminiError(err error) failureKind {
 	if !errors.As(err, &apiErr) {
 		return failOverloaded // network trouble: worth trying the next model
 	}
+	msg := strings.ToLower(apiErr.Message)
+	keyProblem := strings.Contains(msg, "api key") || strings.Contains(msg, "api_key")
 	switch {
+	case apiErr.Code == 401 || keyProblem:
+		return failFatal
 	case apiErr.Code == 429 || apiErr.Status == "RESOURCE_EXHAUSTED":
 		return failRateLimited
 	case apiErr.Code == 404 || apiErr.Status == "NOT_FOUND":
 		return failNoModel
+	case apiErr.Code == 403:
+		// e.g. a paid-only or legacy model on a free project; another model may be open
+		return failNoModel
 	case apiErr.Code >= 500:
 		return failOverloaded
-	case apiErr.Code == 400 && strings.Contains(strings.ToLower(apiErr.Message), "model"):
+	case apiErr.Code == 400 && strings.Contains(msg, "model"):
 		return failNoModel
 	}
 	return failFatal

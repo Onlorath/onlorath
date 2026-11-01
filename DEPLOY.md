@@ -55,19 +55,18 @@ Environment değişkenleri:
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Canlı admin girişi (güçlü bir şifre) |
 | `COOKIE_SECURE` | `true` |
 | `CLIENT_URL` | `https://onlorath.vercel.app` |
-| `GEMINI_API_KEY` | Sohbet asistanı için. Google AI Studio (`AIza…`) ve Vertex AI express (`AQ.…`) anahtarlarının ikisi de çalışır; tür önekten anlaşılır |
-| `GEMINI_BACKEND` | İsteğe bağlı: `gemini` ya da `vertex` (otomatik seçimi ezmek için) |
-| `GEMINI_MODELS` | İsteğe bağlı, virgülle ayrılmış deneme sırası. Boşsa: `gemini-2.5-flash,gemini-2.5-flash-lite,gemini-2.0-flash,gemini-2.0-flash-lite`. Bir modelin kotası dolunca ya da yoğunken sıradakine geçilir |
-
-> **Ücretsiz kalmak için:** anahtarı [Google AI Studio](https://aistudio.google.com/apikey)'dan, **faturalandırma
-> (billing) bağlı olmayan** bir projede oluştur (`AIza…` ile başlar). Böyle bir anahtar ücretsiz kotayı aşınca
-> ücret çıkarmaz, sadece `429` döner; uygulama da sıradaki modele geçer. Vertex AI (`AQ.…`) anahtarları
-> Google Cloud faturalandırmasına bağlanabildiği için önerilmez. Hangi modellerin ücretsiz olduğu
-> AI Studio → Rate limits sayfasında görünür; liste değişirse `GEMINI_MODELS`'i ona göre güncelle.
+| `GEMINI_API_KEY` | Sohbet asistanı için, Google AI Studio anahtarı (Mayıs 2026'dan beri `AQ.…` ile başlar; eski anahtarlar `AIza…`) |
+| `GEMINI_MODELS` | İsteğe bağlı, virgülle ayrılmış deneme sırası. Boşsa: `gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite`. Kota dolunca, model yoğunken ya da projeye kapalıyken sıradakine geçilir |
+| `GEMINI_BACKEND` | Boş bırak. Yalnızca Vertex AI kullanacaksan `vertex` |
 | `SUPABASE_URL` | `https://PROJE.supabase.co` |
 | `SUPABASE_SERVICE_KEY` | 1.4'teki anahtar |
 | `SUPABASE_BUCKET` | `uploads` |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `DISCORD_WEBHOOK_URL` | Bildirimler: iletişim formu mesajları ve sohbetteki her ziyaretçi mesajı (asistan kapalıyken de) buraya gelir |
+
+> **Gemini'yi ücretsiz kullanmak için:** anahtarı [Google AI Studio](https://aistudio.google.com/apikey)'da
+> **faturalandırma (billing) bağlı olmayan** bir projede oluştur. Böyle bir proje Free katmanda kalır: kota
+> dolunca ya da model ücretsiz katmanda değilse ücret çıkmaz, hata döner ve uygulama sıradaki modele geçer.
+> Projeye billing bağlarsan bu güvence kalkar. Güncel modeller: ai.google.dev/gemini-api/docs/models.
 
 Rastgele anahtar üretmek için (PowerShell, iki kez çalıştır):
 

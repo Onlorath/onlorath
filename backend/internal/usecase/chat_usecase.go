@@ -37,16 +37,11 @@ type chatUseCase struct {
 	cacheMu      sync.RWMutex
 }
 
-// geminiBackend picks the API for a key: Vertex AI express-mode keys start with "AQ.",
-// Google AI Studio keys with "AIza". override ("gemini" / "vertex") wins when set.
-func geminiBackend(apiKey, override string) genai.Backend {
-	switch strings.ToLower(override) {
-	case "vertex":
-		return genai.BackendVertexAI
-	case "gemini":
-		return genai.BackendGeminiAPI
-	}
-	if strings.HasPrefix(apiKey, "AQ.") {
+// geminiBackend picks the API: the Gemini Developer API (AI Studio keys, both the
+// "AIza…" standard keys and the "AQ.…" auth keys AI Studio issues since May 2026)
+// unless GEMINI_BACKEND=vertex asks for Vertex AI express mode.
+func geminiBackend(override string) genai.Backend {
+	if strings.EqualFold(override, "vertex") {
 		return genai.BackendVertexAI
 	}
 	return genai.BackendGeminiAPI
@@ -57,7 +52,7 @@ func NewChatUseCase(chatRepo domain.ChatRepository, siteUseCase domain.SiteUseCa
 	models := newModelPool(parseModelList(cfg.GeminiModels))
 
 	if cfg.GeminiAPIKey != "" {
-		backend := geminiBackend(cfg.GeminiAPIKey, cfg.GeminiBackend)
+		backend := geminiBackend(cfg.GeminiBackend)
 		client, err := genai.NewClient(context.Background(), &genai.ClientConfig{
 			APIKey:  cfg.GeminiAPIKey,
 			Backend: backend,

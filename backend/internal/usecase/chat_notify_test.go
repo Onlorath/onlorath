@@ -19,18 +19,14 @@ func (f *fakeNotifier) Notify(_ context.Context, text string) error {
 }
 
 func TestGeminiBackend(t *testing.T) {
-	cases := []struct {
-		key, override string
-		want          genai.Backend
-	}{
-		{"AIzaSyExample", "", genai.BackendGeminiAPI},
-		{"AQ.Ab8Example", "", genai.BackendVertexAI},
-		{"AQ.Ab8Example", "gemini", genai.BackendGeminiAPI},
-		{"AIzaSyExample", "VERTEX", genai.BackendVertexAI},
+	cases := map[string]genai.Backend{
+		"":       genai.BackendGeminiAPI, // AI Studio keys, "AIza…" and "AQ.…" alike
+		"gemini": genai.BackendGeminiAPI,
+		"VERTEX": genai.BackendVertexAI,
 	}
-	for _, c := range cases {
-		if got := geminiBackend(c.key, c.override); got != c.want {
-			t.Errorf("geminiBackend(%q, %q) = %v, want %v", c.key, c.override, got, c.want)
+	for override, want := range cases {
+		if got := geminiBackend(override); got != want {
+			t.Errorf("geminiBackend(%q) = %v, want %v", override, got, want)
 		}
 	}
 }

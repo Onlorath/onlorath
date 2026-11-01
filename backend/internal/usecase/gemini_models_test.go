@@ -45,15 +45,35 @@ func TestModelPoolCooldownExpires(t *testing.T) {
 	}
 }
 
-func TestModelPoolStopsOnAuthError(t *testing.T) {
-	p := newModelPool([]string{"a", "b"})
-	calls := 0
-	_, err := p.generate(context.Background(), func(_ context.Context, _ string) (string, error) {
-		calls++
-		return "", genai.APIError{Code: 403, Status: "PERMISSION_DENIED"}
+func TestModelPoolStopsOnKeyErrors(t *testing.T) {
+	keyErrors := []genai.APIError{
+		{Code: 401, Status: "UNAUTHENTICATED"},
+		{Code: 400, Status: "INVALID_ARGUMENT", Message: "API key not valid. Please pass a valid API key."},
+		{Code: 403, Status: "PERMISSION_DENIED", Message: "Your API key was reported as leaked."},
+	}
+	for _, keyErr := range keyErrors {
+		p := newModelPool([]string{"a", "b"})
+		calls := 0
+		_, err := p.generate(context.Background(), func(_ context.Context, _ string) (string, error) {
+			calls++
+			return "", keyErr
+		})
+		if !errors.Is(err, domain.ErrChatUnavailable) || calls != 1 {
+			t.Errorf("%d %s: err = %v after %d calls, want chat_unavailable after 1", keyErr.Code, keyErr.Status, err, calls)
+		}
+	}
+}
+
+func TestModelPoolMovesOnWhenModelIsClosedToProject(t *testing.T) {
+	p := newModelPool([]string{"paid-only", "free"})
+	reply, err := p.generate(context.Background(), func(_ context.Context, m string) (string, error) {
+		if m == "paid-only" {
+			return "", genai.APIError{Code: 403, Status: "PERMISSION_DENIED", Message: "This model is not available on the free tier."}
+		}
+		return "ok", nil
 	})
-	if !errors.Is(err, domain.ErrChatUnavailable) || calls != 1 {
-		t.Errorf("err = %v after %d calls, want chat_unavailable after 1", err, calls)
+	if err != nil || reply != "ok" {
+		t.Errorf("generate = %q, %v; want fallback to the free model", reply, err)
 	}
 }
 
