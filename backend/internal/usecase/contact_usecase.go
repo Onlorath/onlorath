@@ -1,31 +1,26 @@
 package usecase
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
 	"regexp"
 	"strings"
-	"time"
 
-	"backend/config"
 	"backend/internal/domain"
+	"backend/internal/pkg/notify"
 )
 
 var contactEmailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 type contactUsecase struct {
 	contactRepo domain.ContactRepository
-	cfg         *config.Config
+	notifier    notify.Notifier
 }
 
-func NewContactUsecase(contactRepo domain.ContactRepository, cfg *config.Config) domain.ContactUsecase {
+func NewContactUsecase(contactRepo domain.ContactRepository, notifier notify.Notifier) domain.ContactUsecase {
 	return &contactUsecase{
 		contactRepo: contactRepo,
-		cfg:         cfg,
+		notifier:    notifier,
 	}
 }
 
@@ -80,64 +75,8 @@ func (u *contactUsecase) SendContactEmail(ctx context.Context, req *domain.Conta
 		return err
 	}
 
-	if u.cfg.DiscordWebhookURL == "" && (u.cfg.TelegramBotToken == "" || u.cfg.TelegramChatID == "") {
-		log.Println("Warning: No Discord or Telegram webhooks configured for contact form")
-	}
-
-	// 5. Send to Webhooks
-	messageContent := fmt.Sprintf("📬 **Yeni İletişim Formu Mesajı**\n**Gönderen:** %s\n**E-posta:** %s\n\n**Mesaj:**\n%s", req.Name, req.Email, req.Message)
-
-	client := &http.Client{Timeout: 5 * time.Second}
-	var errs []string
-
-	// Discord
-	if u.cfg.DiscordWebhookURL != "" {
-		payload := map[string]string{"content": messageContent}
-		payloadBytes, _ := json.Marshal(payload)
-
-		reqHTTP, _ := http.NewRequestWithContext(ctx, "POST", u.cfg.DiscordWebhookURL, bytes.NewBuffer(payloadBytes))
-		reqHTTP.Header.Set("Content-Type", "application/json")
-
-		resp, err := client.Do(reqHTTP)
-		if err != nil {
-			errs = append(errs, "discord error: "+err.Error())
-		} else {
-			resp.Body.Close()
-			if resp.StatusCode >= 400 {
-				errs = append(errs, fmt.Sprintf("discord returned status %d", resp.StatusCode))
-			}
-		}
-	}
-
-	// Telegram
-	if u.cfg.TelegramBotToken != "" && u.cfg.TelegramChatID != "" {
-		tgURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", u.cfg.TelegramBotToken)
-		payload := map[string]interface{}{
-			"chat_id":    u.cfg.TelegramChatID,
-			"text":       messageContent,
-			"parse_mode": "Markdown", // Basic Markdown
-		}
-		payloadBytes, _ := json.Marshal(payload)
-
-		reqHTTP, _ := http.NewRequestWithContext(ctx, "POST", tgURL, bytes.NewBuffer(payloadBytes))
-		reqHTTP.Header.Set("Content-Type", "application/json")
-
-		resp, err := client.Do(reqHTTP)
-		if err != nil {
-			errs = append(errs, "telegram error: "+err.Error())
-		} else {
-			resp.Body.Close()
-			if resp.StatusCode >= 400 {
-				errs = append(errs, fmt.Sprintf("telegram returned status %d", resp.StatusCode))
-			}
-		}
-	}
-
-	// Log errors if any occurred, but we don't necessarily want to block the user from seeing success
-	// unless both failed and we expected at least one to work.
-	if len(errs) > 0 {
-		log.Printf("[Contact Webhook Warnings/Errors] %v", errs)
-	}
-
+	// 5. Notify the owner in the background; the message is already safe in the inbox.
+	notify.Async(u.notifier, fmt.Sprintf("Yeni iletişim formu mesajı (%s)\nGönderen: %s <%s>\n\n%s",
+		strings.ToUpper(msg.Locale), req.Name, req.Email, req.Message))
 	return nil
 }

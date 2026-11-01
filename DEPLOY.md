@@ -55,11 +55,12 @@ Environment değişkenleri:
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Canlı admin girişi (güçlü bir şifre) |
 | `COOKIE_SECURE` | `true` |
 | `CLIENT_URL` | `https://onlorath.vercel.app` |
-| `GEMINI_API_KEY` | Sohbet asistanı için |
+| `GEMINI_API_KEY` | Sohbet asistanı için. Google AI Studio (`AIza…`) ve Vertex AI express (`AQ.…`) anahtarlarının ikisi de çalışır; tür önekten anlaşılır |
+| `GEMINI_BACKEND` | İsteğe bağlı: `gemini` ya da `vertex` (otomatik seçimi ezmek için) |
 | `SUPABASE_URL` | `https://PROJE.supabase.co` |
 | `SUPABASE_SERVICE_KEY` | 1.4'teki anahtar |
 | `SUPABASE_BUCKET` | `uploads` |
-| `DISCORD_WEBHOOK_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | İsteğe bağlı bildirimler |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `DISCORD_WEBHOOK_URL` | Bildirimler: iletişim formu mesajları ve sohbetteki her ziyaretçi mesajı (asistan kapalıyken de) buraya gelir |
 
 Rastgele anahtar üretmek için (PowerShell, iki kez çalıştır):
 

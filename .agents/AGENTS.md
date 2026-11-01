@@ -143,6 +143,8 @@ Every visible text, project, timeline item, skill and link lives in Postgres and
 ## 🤖 Chat (Gemini 2.5 Flash)
 
 - **System prompt:** built by `buildSystemPrompt(site, locale)` from the same DB content as the page (cached for 5 minutes). It replies in the site locale and includes anti-prompt-injection rules.
+- **Backend:** `AQ.…` keys use Vertex AI express mode, others the Gemini API (`GEMINI_BACKEND` overrides).
+- **Owner alerts:** every visitor message is forwarded to Telegram/Discord via `internal/pkg/notify` (plain text, async, rate-limited to a burst of 20 then 2/min), including when the assistant is down. Contact form submissions use the same notifier.
 - **Quotas:** `CHAT_USER_LIMIT` (default 15) and `CHAT_GLOBAL_LIMIT` (default 50) per rolling 24h window. Returns 429 plus the `X-Chat-Quota-Exceeded` / `X-Chat-System-Busy` headers.
 - **Error codes:** `chat_quota_exceeded`, `chat_system_busy`, `chat_unavailable` (no key or an invalid key → 503), `chat_upstream_busy` (503).
   - The frontend translates them in `dictionaries.ts`.

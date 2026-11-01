@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -10,7 +11,9 @@ import (
 
 	"backend/config"
 	"backend/internal/domain"
+	"backend/internal/pkg/notify"
 
+	"golang.org/x/time/rate"
 	"google.golang.org/genai"
 )
 
@@ -23,34 +26,81 @@ type chatUseCase struct {
 	cfg         *config.Config
 	genaiClient *genai.Client
 
+	notifier notify.Notifier
+	// notifyLimiter caps owner alerts: when the assistant is down, messages aren't
+	// stored, so the chat quota alone would not stop someone flooding Telegram.
+	notifyLimiter *rate.Limiter
+
 	siteCache    *domain.Site
 	siteCacheSet time.Time
 	cacheMu      sync.RWMutex
 }
 
-func NewChatUseCase(chatRepo domain.ChatRepository, siteUseCase domain.SiteUseCase, cfg *config.Config) domain.ChatUseCase {
+// geminiBackend picks the API for a key: Vertex AI express-mode keys start with "AQ.",
+// Google AI Studio keys with "AIza". override ("gemini" / "vertex") wins when set.
+func geminiBackend(apiKey, override string) genai.Backend {
+	switch strings.ToLower(override) {
+	case "vertex":
+		return genai.BackendVertexAI
+	case "gemini":
+		return genai.BackendGeminiAPI
+	}
+	if strings.HasPrefix(apiKey, "AQ.") {
+		return genai.BackendVertexAI
+	}
+	return genai.BackendGeminiAPI
+}
+
+func NewChatUseCase(chatRepo domain.ChatRepository, siteUseCase domain.SiteUseCase, notifier notify.Notifier, cfg *config.Config) domain.ChatUseCase {
 	var genaiClient *genai.Client
-	var err error
 
 	if cfg.GeminiAPIKey != "" {
-		// Initialize the GenAI client with background context
-		genaiClient, err = genai.NewClient(context.Background(), &genai.ClientConfig{
+		backend := geminiBackend(cfg.GeminiAPIKey, cfg.GeminiBackend)
+		client, err := genai.NewClient(context.Background(), &genai.ClientConfig{
 			APIKey:  cfg.GeminiAPIKey,
-			Backend: genai.BackendGeminiAPI,
+			Backend: backend,
 		})
 		if err != nil {
-			log.Printf("Failed to initialize Gemini GenAI client: %v", err)
+			log.Printf("Failed to initialize Gemini client (%s): %v", backend, err)
+		} else {
+			genaiClient = client
+			log.Printf("Chat assistant uses %s", backend)
 		}
 	} else {
 		log.Println("Warning: Gemini API Key is empty. Chat functionality will be disabled.")
 	}
 
 	return &chatUseCase{
-		chatRepo:    chatRepo,
-		siteUseCase: siteUseCase,
-		cfg:         cfg,
-		genaiClient: genaiClient,
+		chatRepo:      chatRepo,
+		siteUseCase:   siteUseCase,
+		cfg:           cfg,
+		genaiClient:   genaiClient,
+		notifier:      notifier,
+		notifyLimiter: rate.NewLimiter(rate.Every(30*time.Second), 20),
 	}
+}
+
+// notifyOwner forwards a visitor's chat message to Telegram/Discord.
+func (u *chatUseCase) notifyOwner(sessionID, userID, locale, message string) {
+	if u.notifier == nil || !u.notifier.Enabled() || !u.notifyLimiter.Allow() {
+		return
+	}
+	who := "misafir " + shortID(sessionID)
+	if userID != "" {
+		who = "kullanıcı " + shortID(userID)
+	}
+	text := fmt.Sprintf("Sohbette yeni mesaj (%s, %s)\n\n%s", strings.ToUpper(domain.NormalizeLocale(locale)), who, message)
+	if u.genaiClient == nil {
+		text += "\n\n(Asistan kapalı; ziyaretçiye cevap gitmedi.)"
+	}
+	notify.Async(u.notifier, text)
+}
+
+func shortID(id string) string {
+	if r := []rune(id); len(r) > 8 {
+		return string(r[:8])
+	}
+	return id
 }
 
 // loadSite returns the site content for the system prompt, cached for siteCacheTTL.
@@ -86,10 +136,6 @@ func mapGeminiError(err error) error {
 }
 
 func (u *chatUseCase) SendMessage(ctx context.Context, userID string, sessionID string, req *domain.SendMessageRequest) (*domain.ChatResponse, error) {
-	if u.genaiClient == nil {
-		return nil, domain.ErrChatUnavailable
-	}
-
 	req.Message = strings.TrimSpace(req.Message)
 	if req.Message == "" {
 		return nil, domain.ErrEmptyChatMessage
@@ -107,6 +153,12 @@ func (u *chatUseCase) SendMessage(ctx context.Context, userID string, sessionID 
 	}
 	if personalReached {
 		return nil, domain.ErrChatLimitReached
+	}
+
+	// The owner hears about every visitor message, even when the assistant can't answer.
+	u.notifyOwner(sessionID, userID, req.Locale, req.Message)
+	if u.genaiClient == nil {
+		return nil, domain.ErrChatUnavailable
 	}
 
 	// Build the instructions before saving anything, so a DB failure leaves no orphan rows.

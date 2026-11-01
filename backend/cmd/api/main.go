@@ -15,6 +15,7 @@ import (
 	"backend/internal/delivery/http/handler"
 	"backend/internal/delivery/http/middleware"
 	"backend/internal/pkg/migrate"
+	"backend/internal/pkg/notify"
 	"backend/internal/pkg/storage"
 	"backend/internal/repository/postgres"
 	"backend/internal/usecase"
@@ -73,7 +74,16 @@ func main() {
 	siteUseCase := usecase.NewSiteUseCase(siteRepo, projectRepo)
 
 	chatRepo := postgres.NewChatRepository(db)
-	chatUseCase := usecase.NewChatUseCase(chatRepo, siteUseCase, cfg)
+	notifier := notify.New(notify.Config{
+		TelegramBotToken:  cfg.TelegramBotToken,
+		TelegramChatID:    cfg.TelegramChatID,
+		DiscordWebhookURL: cfg.DiscordWebhookURL,
+	})
+	if !notifier.Enabled() {
+		log.Println("Warning: no Telegram/Discord configured; contact and chat alerts are off")
+	}
+
+	chatUseCase := usecase.NewChatUseCase(chatRepo, siteUseCase, notifier, cfg)
 	chatHandler := handler.NewChatHandler(chatUseCase, cfg)
 
 	blogRepo := postgres.NewBlogRepository(db)
@@ -81,7 +91,7 @@ func main() {
 	blogHandler := handler.NewBlogHandler(blogUseCase, cfg)
 
 	contactRepo := postgres.NewContactRepository(db)
-	contactUseCase := usecase.NewContactUsecase(contactRepo, cfg)
+	contactUseCase := usecase.NewContactUsecase(contactRepo, notifier)
 	contactHandler := handler.NewContactHandler(contactUseCase)
 
 	siteHandler := handler.NewSiteHandler(siteUseCase, projectUseCase, blogUseCase, contactUseCase)

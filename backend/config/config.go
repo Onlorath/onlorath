@@ -30,9 +30,11 @@ type Config struct {
 	RefreshTokenExpiry time.Duration
 	ClientURL          string
 	GeminiAPIKey       string
-	DiscordWebhookURL  string
-	TelegramBotToken   string
-	TelegramChatID     string
+	// GeminiBackend forces "gemini" (AI Studio) or "vertex"; empty picks by key prefix.
+	GeminiBackend     string
+	DiscordWebhookURL string
+	TelegramBotToken  string
+	TelegramChatID    string
 
 	// Admin bootstrap: when both are set, this account is created (or promoted) as admin at startup.
 	AdminEmail        string
@@ -136,6 +138,7 @@ func LoadConfig() (*Config, error) {
 		RefreshTokenExpiry: refreshTokenExpiry,
 		ClientURL:          clientURL,
 		GeminiAPIKey:       geminiAPIKey,
+		GeminiBackend:      getEnv("GEMINI_BACKEND", ""),
 		DiscordWebhookURL:  getEnv("DISCORD_WEBHOOK_URL", ""),
 		TelegramBotToken:   getEnv("TELEGRAM_BOT_TOKEN", ""),
 		TelegramChatID:     getEnv("TELEGRAM_CHAT_ID", ""),
