@@ -109,6 +109,43 @@ func TestModelPoolAllBusy(t *testing.T) {
 	}
 }
 
+// hang waits like a model that never answers, until its attempt is cut short.
+func hang(ctx context.Context) (string, error) {
+	<-ctx.Done()
+	return "", ctx.Err()
+}
+
+func TestModelPoolSkipsModelThatHangs(t *testing.T) {
+	p := newModelPool([]string{"slow", "fast"})
+	p.attemptTimeout = 20 * time.Millisecond
+	reply, err := p.generate(context.Background(), func(ctx context.Context, m string) (string, error) {
+		if m == "slow" {
+			return hang(ctx)
+		}
+		return "ok", nil
+	})
+	if err != nil || reply != "ok" {
+		t.Fatalf("generate = %q, %v; want fallback to the fast model", reply, err)
+	}
+	if got := p.available(); !reflect.DeepEqual(got, []string{"fast"}) {
+		t.Errorf("available = %v, want the hanging model cooling down", got)
+	}
+}
+
+func TestModelPoolGivesUpAtReplyDeadline(t *testing.T) {
+	p := newModelPool([]string{"a", "b", "c"})
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	_, err := p.generate(ctx, func(ctx context.Context, _ string) (string, error) { return hang(ctx) })
+	if !errors.Is(err, domain.ErrChatUpstreamBusy) {
+		t.Errorf("err = %v, want chat_upstream_busy", err)
+	}
+	if waited := time.Since(start); waited > time.Second {
+		t.Errorf("waited %v past the deadline", waited)
+	}
+}
+
 func TestModelPoolUnknownModels(t *testing.T) {
 	p := newModelPool([]string{"nope"})
 	_, err := p.generate(context.Background(), func(_ context.Context, _ string) (string, error) {

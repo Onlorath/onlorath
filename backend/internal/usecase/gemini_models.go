@@ -19,6 +19,13 @@ import (
 // new projects). Override with GEMINI_MODELS (comma separated) as Google's lineup changes.
 var DefaultGeminiModels = []string{"gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"}
 
+// When Gemini is overloaded a model can take 30+ s just to return 503, so each attempt
+// is cut short and the visitor waits at most replyTimeout in total.
+const (
+	attemptTimeout = 10 * time.Second
+	replyTimeout   = 25 * time.Second
+)
+
 type failureKind int
 
 const (
@@ -72,14 +79,16 @@ func cooldownFor(kind failureKind, err error) time.Duration {
 		}
 		return time.Minute
 	default:
-		return 30 * time.Second
+		// Demand spikes last minutes; retrying sooner makes every visitor wait on the busy model.
+		return 5 * time.Minute
 	}
 }
 
 // modelPool remembers which models are temporarily exhausted.
 type modelPool struct {
-	models []string
-	now    func() time.Time
+	models         []string
+	now            func() time.Time
+	attemptTimeout time.Duration
 
 	mu      sync.Mutex
 	blocked map[string]time.Time
@@ -89,7 +98,7 @@ func newModelPool(models []string) *modelPool {
 	if len(models) == 0 {
 		models = DefaultGeminiModels
 	}
-	return &modelPool{models: models, now: time.Now, blocked: map[string]time.Time{}}
+	return &modelPool{models: models, now: time.Now, attemptTimeout: attemptTimeout, blocked: map[string]time.Time{}}
 }
 
 // available returns models not cooling down; if all are, it returns them all anyway
@@ -116,14 +125,21 @@ func (p *modelPool) block(model string, d time.Duration) {
 }
 
 // generate asks each available model in turn and returns the first reply.
+// An attempt that outlives attemptTimeout counts as overloaded; running out of ctx's
+// deadline altogether means Gemini is busy.
 func (p *modelPool) generate(ctx context.Context, ask func(ctx context.Context, model string) (string, error)) (string, error) {
 	var lastKind failureKind = failOverloaded
 	for _, model := range p.available() {
-		reply, err := ask(ctx, model)
+		attemptCtx, cancel := context.WithTimeout(ctx, p.attemptTimeout)
+		reply, err := ask(attemptCtx, model)
+		cancel()
 		if err == nil {
 			return reply, nil
 		}
 		if ctx.Err() != nil {
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return "", domain.ErrChatUpstreamBusy
+			}
 			return "", ctx.Err()
 		}
 		kind := classifyGeminiError(err)

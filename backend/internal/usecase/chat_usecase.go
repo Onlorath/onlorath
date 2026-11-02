@@ -230,7 +230,8 @@ func (u *chatUseCase) SendMessage(ctx context.Context, userID string, sessionID 
 			},
 		},
 		// Questions about the portfolio need no long reasoning; default thinking adds seconds per reply.
-		ThinkingConfig: &genai.ThinkingConfig{ThinkingLevel: genai.ThinkingLevelMinimal},
+		// LOW rather than MINIMAL: gemini-3.8-flash rejects MINIMAL.
+		ThinkingConfig: &genai.ThinkingConfig{ThinkingLevel: genai.ThinkingLevelLow},
 	}
 
 	ask := func(ctx context.Context, model string, cfg *genai.GenerateContentConfig) (string, error) {
@@ -244,7 +245,9 @@ func (u *chatUseCase) SendMessage(ctx context.Context, userID string, sessionID 
 		}
 		return resp.Text(), nil
 	}
-	replyText, err := u.models.generate(ctx, func(ctx context.Context, model string) (string, error) {
+	genCtx, cancel := context.WithTimeout(ctx, replyTimeout)
+	defer cancel()
+	replyText, err := u.models.generate(genCtx, func(ctx context.Context, model string) (string, error) {
 		reply, err := ask(ctx, model, chatConfig)
 		if thinkingRejected(err) {
 			// Some models don't accept this thinking level; ask again with their default.
