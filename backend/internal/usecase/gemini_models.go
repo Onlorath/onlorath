@@ -53,6 +53,13 @@ func classifyGeminiError(err error) failureKind {
 	return failFatal
 }
 
+// thinkingRejected reports whether the model refused the request's thinking settings.
+func thinkingRejected(err error) bool {
+	var apiErr genai.APIError
+	return errors.As(err, &apiErr) && apiErr.Code == 400 &&
+		strings.Contains(strings.ToLower(apiErr.Message), "thinking")
+}
+
 // cooldownFor is how long a model is skipped after a failure of this kind.
 func cooldownFor(kind failureKind, err error) time.Duration {
 	switch kind {

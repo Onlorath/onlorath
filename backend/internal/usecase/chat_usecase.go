@@ -229,10 +229,12 @@ func (u *chatUseCase) SendMessage(ctx context.Context, userID string, sessionID 
 				{Text: sysInstructionStr},
 			},
 		},
+		// Questions about the portfolio need no long reasoning; default thinking adds seconds per reply.
+		ThinkingConfig: &genai.ThinkingConfig{ThinkingLevel: genai.ThinkingLevelMinimal},
 	}
 
-	replyText, err := u.models.generate(ctx, func(ctx context.Context, model string) (string, error) {
-		chat, err := u.genaiClient.Chats.Create(ctx, model, chatConfig, history)
+	ask := func(ctx context.Context, model string, cfg *genai.GenerateContentConfig) (string, error) {
+		chat, err := u.genaiClient.Chats.Create(ctx, model, cfg, history)
 		if err != nil {
 			return "", err
 		}
@@ -241,6 +243,16 @@ func (u *chatUseCase) SendMessage(ctx context.Context, userID string, sessionID 
 			return "", err
 		}
 		return resp.Text(), nil
+	}
+	replyText, err := u.models.generate(ctx, func(ctx context.Context, model string) (string, error) {
+		reply, err := ask(ctx, model, chatConfig)
+		if thinkingRejected(err) {
+			// Some models don't accept this thinking level; ask again with their default.
+			plain := *chatConfig
+			plain.ThinkingConfig = nil
+			return ask(ctx, model, &plain)
+		}
+		return reply, err
 	})
 	if err != nil {
 		return nil, err

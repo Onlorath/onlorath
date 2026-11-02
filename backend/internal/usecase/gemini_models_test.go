@@ -34,6 +34,24 @@ func TestModelPoolFallsBackOnRateLimitAndRemembers(t *testing.T) {
 	}
 }
 
+func TestThinkingRejected(t *testing.T) {
+	cases := []struct {
+		err  error
+		want bool
+	}{
+		{genai.APIError{Code: 400, Message: "Thinking level MINIMAL is not supported for this model."}, true},
+		{genai.APIError{Code: 400, Message: "Invalid model name"}, false},
+		{genai.APIError{Code: 429, Message: "thinking tokens quota exceeded"}, false},
+		{errors.New("thinking"), false},
+		{nil, false},
+	}
+	for _, c := range cases {
+		if got := thinkingRejected(c.err); got != c.want {
+			t.Errorf("thinkingRejected(%v) = %v, want %v", c.err, got, c.want)
+		}
+	}
+}
+
 func TestModelPoolCooldownExpires(t *testing.T) {
 	now := time.Now()
 	p := newModelPool([]string{"a", "b"})
