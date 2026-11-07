@@ -21,3 +21,10 @@
 .option:hover { color: var(--text-main); background: rgba(255, 255, 255, 0.7); }
 
 .active { background: var(--text-main); color: var(--surface); }
+
+/* Larger touch targets on phones (44px tall overall) */
+@media (max-width: 640px) {
+  .switch { font-size: 13px; }
+  .option,
+  .active { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; }
+}

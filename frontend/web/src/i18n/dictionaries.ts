@@ -2,7 +2,7 @@ import type { Locale } from '@/lib/i18n';
 
 const tr = {
   meta: { title: 'Portföy' },
-  nav: { label: 'Ana menü', projects: 'Projeler', about: 'Hakkımda', blog: 'Blog', contact: 'İletişim', message: 'Mesaj At', language: 'Dil' },
+  nav: { label: 'Ana menü', projects: 'Projeler', about: 'Hakkımda', blog: 'Blog', contact: 'İletişim', message: 'Mesaj At', language: 'Dil', menu: 'Menü', closeMenu: 'Menüyü kapat', skip: 'Ana içeriğe geç' },
   projects: {
     title: 'Projeler',
     filterLabel: 'Projeleri filtrele',
@@ -64,7 +64,7 @@ export type Dictionary = typeof tr;
 
 const en: Dictionary = {
   meta: { title: 'Portfolio' },
-  nav: { label: 'Main menu', projects: 'Projects', about: 'About', blog: 'Blog', contact: 'Contact', message: 'Contact', language: 'Language' },
+  nav: { label: 'Main menu', projects: 'Projects', about: 'About', blog: 'Blog', contact: 'Contact', message: 'Contact', language: 'Language', menu: 'Menu', closeMenu: 'Close menu', skip: 'Skip to main content' },
   projects: {
     title: 'Projects',
     filterLabel: 'Filter projects',

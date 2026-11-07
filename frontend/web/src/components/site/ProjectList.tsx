@@ -31,6 +31,9 @@ export function ProjectList({ projects, locale, dict }: Props) {
     { key: 'software', label: dict.projects.software },
   ];
 
+  // No projects at all: hide the section instead of rendering "(00)" and an empty list.
+  if (projects.length === 0) return null;
+
   return (
     <section id="projects" className={styles.section}>
       <div className={styles.head}>

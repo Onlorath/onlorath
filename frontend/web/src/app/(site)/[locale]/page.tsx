@@ -21,7 +21,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   return (
     <div className="container">
       <SiteHeader locale={locale} logoText={site.profile.logo_text || site.profile.name} dict={dict} />
-      <main>
+      <main id="main" tabIndex={-1}>
         <Hero profile={site.profile} locale={locale} />
         <ProjectList projects={site.projects} locale={locale} dict={dict} />
         <About profile={site.profile} experiences={site.experiences} skills={site.skills} locale={locale} dict={dict} />

@@ -33,11 +33,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { profile } = await getSite();
     const name = profile.name || profile.logo_text;
     const role = pick(profile.role_title, locale) || undefined;
+    // An empty profile (fresh database) must not produce titles like " — Portfolio".
+    const title = name ? `${name} — ${dict.meta.title}` : dict.meta.title;
     return {
-      title: { default: `${name} — ${dict.meta.title}`, template: `%s — ${name}` },
+      title: { default: title, template: name ? `%s — ${name}` : '%s' },
       description: role,
       alternates: { languages: { tr: '/tr', en: '/en' } },
-      openGraph: { title: `${name} — ${dict.meta.title}`, description: role, locale },
+      openGraph: { title, description: role, locale },
     };
   } catch {
     return { title: dict.meta.title };
@@ -47,12 +49,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function SiteLayout({ children, params }: Props) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
+  const dict = getDictionary(locale);
 
   return (
     <html lang={locale} className={fontVariables}>
       <body>
+        <a href="#main" className="skip-link">
+          {dict.nav.skip}
+        </a>
         {children}
-        <ChatWidget locale={locale} dict={getDictionary(locale).chat} />
+        <ChatWidget locale={locale} dict={dict.chat} />
       </body>
     </html>
   );

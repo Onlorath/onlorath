@@ -48,7 +48,7 @@
   transition: background 0.2s ease;
 }
 
-.number { width: 32px; font-size: 14px; font-weight: 600; color: var(--c-strong); flex-shrink: 0; }
+.number { width: 32px; font-size: 14px; font-weight: 600; color: var(--c-ink); flex-shrink: 0; }
 .open .number { color: var(--c-ink); }
 
 .square { width: 14px; height: 14px; border-radius: 4px; background: var(--c-strong); flex-shrink: 0; }

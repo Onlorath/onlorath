@@ -15,6 +15,8 @@ interface Props {
 export function About({ profile, experiences, skills, locale, dict }: Props) {
   const paragraphs = profile.about_paragraphs.map((p) => pick(p, locale)).filter(Boolean);
 
+  if (paragraphs.length === 0 && skills.length === 0 && experiences.length === 0) return null;
+
   return (
     <section id="about" className={styles.section}>
       <div className={styles.intro}>

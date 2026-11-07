@@ -7,11 +7,14 @@ export function Hero({ profile, locale }: { profile: Profile; locale: Locale }) 
   const lead = pick(profile.hero_lead, locale);
   const role = pick(profile.role_title, locale);
   const location = pick(profile.location_line, locale);
+  const headline = pick(profile.hero_headline, locale);
+
+  if (!headline && !lead && !role && !location) return null;
 
   return (
     <section className={styles.hero}>
       <h1 className={`font-display ${styles.headline}`}>
-        {parseHeadline(pick(profile.hero_headline, locale)).map((seg, i) =>
+        {parseHeadline(headline).map((seg, i) =>
           seg.kind === 'text' ? (
             seg.text
           ) : (

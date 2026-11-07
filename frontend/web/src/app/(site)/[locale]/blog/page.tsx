@@ -30,7 +30,7 @@ export default async function BlogIndex({ params }: Props) {
   return (
     <div className="container">
       <SiteHeader locale={locale} logoText={site.profile.logo_text || site.profile.name} dict={dict} active="blog" />
-      <main className={styles.main}>
+      <main id="main" tabIndex={-1} className={styles.main}>
         <header className={styles.intro}>
           <h1 className={`font-display ${styles.title}`}>{dict.blog.title}</h1>
         </header>

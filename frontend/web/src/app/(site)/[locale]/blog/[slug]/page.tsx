@@ -46,7 +46,7 @@ export default async function BlogPost({ params }: Props) {
   return (
     <div className="container">
       <SiteHeader locale={locale} logoText={site.profile.logo_text || site.profile.name} dict={dict} active="blog" />
-      <main className={styles.main}>
+      <main id="main" tabIndex={-1} className={styles.main}>
         <article className={styles.article}>
           <Link href={`/${locale}/blog`} className={styles.back}>
             ← {dict.blog.back}
