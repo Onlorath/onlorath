@@ -109,3 +109,27 @@
 }
 .sendBtn:hover { transform: translateY(-1px); }
 .sendBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Empty-state suggestions: tap to send the question */
+.suggestions {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 4px;
+}
+.suggestion {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  border: 1.5px solid color-mix(in srgb, var(--lavender-strong) 35%, transparent);
+  background: var(--lavender-soft);
+  color: var(--lavender-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+.suggestion:hover { border-color: var(--lavender-strong); transform: translateY(-1px); }

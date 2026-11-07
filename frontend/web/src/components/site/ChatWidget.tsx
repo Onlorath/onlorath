@@ -75,12 +75,12 @@ export function ChatWidget({ locale, dict }: { locale: Locale; dict: Dictionary[
     if (open) inputRef.current?.focus();
   }, [open]);
 
-  async function send(e?: FormEvent) {
+  async function send(e?: FormEvent, preset?: string) {
     e?.preventDefault();
-    const text = inputRef.current?.value.trim();
+    const text = (preset ?? inputRef.current?.value ?? '').trim();
     if (!text || pending || quotaReached) return;
 
-    inputRef.current!.value = '';
+    if (inputRef.current) inputRef.current.value = '';
     setError(null);
     setMessages((m) => [...m, { role: 'user', content: text }]);
     setPending(true);
@@ -129,6 +129,22 @@ export function ChatWidget({ locale, dict }: { locale: Locale; dict: Dictionary[
           </header>
 
           <div ref={listRef} className={styles.messages} aria-live="polite">
+            {messages.length === 0 && !pending && (
+              <>
+                <div className={styles.model}>{dict.welcome}</div>
+                {!quotaReached && (
+                  <ul className={styles.suggestions} aria-label={dict.suggestionsLabel}>
+                    {dict.suggestions.map((q) => (
+                      <li key={q}>
+                        <button type="button" className={styles.suggestion} onClick={() => void send(undefined, q)}>
+                          {q}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
             {messages.map((m, i) =>
               m.role === 'user' ? (
                 <div key={i} className={styles.user}>

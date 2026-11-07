@@ -49,6 +49,9 @@ const tr = {
     close: 'Kapat',
     reset: 'Yeni sohbet',
     thinking: 'Yazıyor…',
+    welcome: 'Merhaba! Projeler, kullandığım teknolojiler ya da deneyimim hakkında sorabilirsin.',
+    suggestionsLabel: 'Örnek sorular',
+    suggestions: ['Hangi projeler şu an yayında?', 'Hangi teknolojileri kullanıyorsun?', 'Seninle nasıl iletişime geçebilirim?'],
     errors: {
       chat_quota_exceeded: 'Mesaj hakkın doldu. İletişim formunu kullanabilirsin.',
       chat_system_busy: 'Asistan şu anda yoğun. Daha sonra tekrar dene.',
@@ -111,6 +114,9 @@ const en: Dictionary = {
     close: 'Close',
     reset: 'New chat',
     thinking: 'Typing…',
+    welcome: 'Hi! Ask me about the projects, the tech I use or my experience.',
+    suggestionsLabel: 'Example questions',
+    suggestions: ['Which projects are live right now?', 'Which technologies do you use?', 'How can I get in touch?'],
     errors: {
       chat_quota_exceeded: 'You are out of messages. Please use the contact form.',
       chat_system_busy: 'The assistant is busy. Please try again later.',
